@@ -16,6 +16,7 @@
 package honeycomb
 
 import (
+	"fmt"
 	"github.com/davecgh/go-spew/spew"
 	"time"
 
@@ -42,7 +43,7 @@ type Annotation struct {
 
 // Span is the format of trace events that Honeycomb accepts
 type Span struct {
-	TraceID     uint64       `json:"trace.trace_id"`
+	TraceID     string       `json:"trace.trace_id"`
 	Name        string       `json:"name"`
 	ID          uint64       `json:"trace.span_id"`
 	ParentID    uint64       `json:"trace.parent_id,omitempty"`
@@ -66,7 +67,7 @@ func (e *Exporter) Close() {
 func NewExporter(writeKey, dataset string) *Exporter {
 	// Developer note: bump this with each release
 	versionStr := "1.0.1"
-	libhoney.UserAgentAddition = "Honeycomb-OpenCensus-exporter/" + versionStr
+	libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 
 	libhoney.Init(libhoney.Config{
 		WriteKey: writeKey,
@@ -83,7 +84,7 @@ func NewExporter(writeKey, dataset string) *Exporter {
 	}
 }
 
-// ExportSpan exports a span to Honeycomb
+// ExportSpan exports a SpanData to Jaeger.
 func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	spew.Dump("Export Span")
 	spew.Dump(data)
@@ -114,13 +115,48 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	// }
 	ev.SendPresampled()
 }
+
+// // ExportSpan exports a span to Honeycomb
+// func (e *Exporter) ExportSpan(data *trace.SpanData) {
+// 	spew.Dump("Export Span")
+// 	spew.Dump(data)
+// 	ev := e.Builder.NewEvent()
+// 	if e.SampleFraction != 0 {
+// 		ev.SampleRate = uint(1 / e.SampleFraction)
+// 	}
+// 	if e.ServiceName != "" {
+// 		ev.AddField("service_name", e.ServiceName)
+// 	}
+// 	// ev.Timestamp = sd.StartTime
+// 	hs := honeycombSpan(data)
+// 	ev.Add(hs)
+
+// 	// Add an event field for each attribute
+// 	// if len(sd.Attributes) != 0 {
+// 	// 	for key, value := range sd.Attributes {
+// 	// 		ev.AddField(key, value)
+// 	// 	}
+// 	// }
+
+// 	// // Add an event field for status code and status message
+// 	// if sd.Status.Code != 0 {
+// 	// 	ev.AddField("status_code", sd.Status.Code)
+// 	// }
+// 	// if sd.Status.Message != "" {
+// 	// 	ev.AddField("status_description", sd.Status.Message)
+// 	// }
+// 	ev.SendPresampled()
+// }
+
 var _ trace.Exporter = (*Exporter)(nil)
 
 func honeycombSpan(s *trace.SpanData) *Span {
 	spew.Dump(s)
 	sc := s.SpanContext
+	hcTraceID := fmt.Sprintf("%x%016x", sc.TraceID.High, sc.TraceID.Low)
+	spew.Dump(hcTraceID)
 	hcSpan := &Span{
-		TraceID:   sc.TraceID.High,
+		TraceID:   hcTraceID,
 		ID:        sc.SpanID,
 		Name:      s.Name,
 		Timestamp: s.StartTime,

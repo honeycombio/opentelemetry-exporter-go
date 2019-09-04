@@ -15,58 +15,40 @@
 package main
 
 import (
+	"context"
 	"github.com/davecgh/go-spew/spew"
+
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
-	"io"
-	"net/http"
-
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/plugin/httptrace"
 	"go.opentelemetry.io/sdk/trace"
-	// _ "go.opentelemetry.io/experimental/streaming/exporter/stderr/install"
-)
-
-var (
-	tracer = apitrace.GlobalTracer().
-		WithService("server").
-		WithComponent("main").
-		WithResources(
-			key.New("whatevs").String("nooooo"),
-		)
 )
 
 func main() {
+	trace.Register()
+	ctx := context.Background()
+
+	// Register the Jaeger exporter to be able to retrieve
+	// the collected spans.
 	exporter := honeycomb.NewExporter("API-KEY", "dataset-name")
 	spew.Dump("HELLO HONEYCOMB")
 	defer exporter.Close()
-
 	trace.RegisterExporter(exporter)
 
-	helloHandler := func(w http.ResponseWriter, req *http.Request) {
-		attrs, tags, spanCtx := httptrace.Extract(req)
+	// For demoing purposes, always sample. In a production application, you should
+	// configure this to a trace.ProbabilitySampler set at the desired
+	// probability.
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
-		req = req.WithContext(tag.WithMap(req.Context(), tag.NewMap(tag.MapUpdate{
-			MultiKV: tags,
-		})))
+	ctx, span := apitrace.GlobalTracer().Start(ctx, "/foo")
+	bar(ctx)
+	span.Finish()
 
-		ctx, span := tracer.Start(
-			req.Context(),
-			"hello",
-			apitrace.WithAttributes(attrs...),
-			apitrace.ChildOf(spanCtx),
-		)
-		defer span.Finish()
+	// exporter.Flush()
+}
 
-		span.AddEvent(ctx, "handling this...")
+func bar(ctx context.Context) {
+	_, span := apitrace.GlobalTracer().Start(ctx, "/bar")
+	defer span.Finish()
 
-		_, _ = io.WriteString(w, "Hello, world!\n")
-	}
-
-	http.HandleFunc("/hello", helloHandler)
-	err := http.ListenAndServe(":7777", nil)
-	if err != nil {
-		panic(err)
-	}
+	// Do bar...
 }
