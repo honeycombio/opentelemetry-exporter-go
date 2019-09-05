@@ -16,7 +16,6 @@ package main
 
 import (
 	"context"
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 	apitrace "go.opentelemetry.io/api/trace"
@@ -27,10 +26,11 @@ func main() {
 	trace.Register()
 	ctx := context.Background()
 
-	// Register the Jaeger exporter to be able to retrieve
+	// Register the Honeycomb exporter to be able to retrieve
 	// the collected spans.
 	exporter := honeycomb.NewExporter("API-KEY", "dataset-name")
-	spew.Dump("HELLO HONEYCOMB")
+	exporter.ServiceName = "opentelemetry-example"
+
 	defer exporter.Close()
 	trace.RegisterExporter(exporter)
 

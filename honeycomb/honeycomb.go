@@ -18,6 +18,7 @@ package honeycomb
 import (
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
+	"google.golang.org/grpc/codes"
 	"time"
 
 	libhoney "github.com/honeycombio/libhoney-go"
@@ -43,13 +44,39 @@ type Annotation struct {
 
 // Span is the format of trace events that Honeycomb accepts
 type Span struct {
-	TraceID     string       `json:"trace.trace_id"`
-	Name        string       `json:"name"`
-	ID          uint64       `json:"trace.span_id"`
-	ParentID    uint64       `json:"trace.parent_id,omitempty"`
-	DurationMs  float64      `json:"duration_ms"`
-	Timestamp   time.Time    `json:"timestamp,omitempty"`
-	Annotations []Annotation `json:"annotations,omitempty"`
+	TraceID         string       `json:"trace.trace_id"`
+	Name            string       `json:"name"`
+	ID              uint64       `json:"trace.span_id"`
+	ParentID        uint64       `json:"trace.parent_id,omitempty"`
+	DurationMs      float64      `json:"duration_ms"`
+	Timestamp       time.Time    `json:"timestamp,omitempty"`
+	Annotations     []Annotation `json:"annotations,omitempty"`
+	Status          string       `json:"response.status_code,omitempty"`
+	Error           bool         `json:"error,omitempty"`
+	HasRemoteParent bool         `json:"has_remote_parent"`
+}
+
+// Attributes:
+//  - Key
+//  - VType
+//  - VStr
+//  - VDouble
+//  - VBool
+//  - VLong
+//  - VBinary
+type Tag struct {
+	Key string `thrift:"key,1,required" db:"key" json:"key"`
+	// VType   TagType  `json:"vType"`
+	VStr    *string  `json:"vStr,omitempty"`
+	VDouble *float64 `thrift:"vDouble,4" db:"vDouble" json:"vDouble,omitempty"`
+	VBool   *bool    `thrift:"vBool,5" db:"vBool" json:"vBool,omitempty"`
+	VLong   *int64   `thrift:"vLong,6" db:"vLong" json:"vLong,omitempty"`
+	VBinary []byte   `thrift:"vBinary,7" db:"vBinary" json:"vBinary,omitempty"`
+}
+
+type Message struct {
+	Timestamp int64  `json:"timestamp"`
+	Fields    []*Tag `json:"fields"`
 }
 
 // Close waits for all in-flight messages to be sent. You should
@@ -64,13 +91,13 @@ func (e *Exporter) Close() {
 // dataset is the name of your Honeycomb dataset to send trace events to
 //
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
-func NewExporter(writeKey, dataset string) *Exporter {
+func NewExporter(apiKey, dataset string) *Exporter {
 	// Developer note: bump this with each release
 	versionStr := "1.0.1"
 	libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 
 	libhoney.Init(libhoney.Config{
-		WriteKey: writeKey,
+		WriteKey: apiKey,
 		Dataset:  dataset,
 	})
 	builder := libhoney.NewBuilder()
@@ -86,8 +113,6 @@ func NewExporter(writeKey, dataset string) *Exporter {
 
 // ExportSpan exports a SpanData to Jaeger.
 func (e *Exporter) ExportSpan(data *trace.SpanData) {
-	spew.Dump("Export Span")
-	spew.Dump(data)
 	ev := e.Builder.NewEvent()
 	if e.SampleFraction != 0 {
 		ev.SampleRate = uint(1 / e.SampleFraction)
@@ -107,59 +132,49 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	// }
 
 	// // Add an event field for status code and status message
-	// if sd.Status.Code != 0 {
-	// 	ev.AddField("status_code", sd.Status.Code)
-	// }
+	if data.Status != 0 {
+		ev.AddField("status_code", data.Status)
+	}
 	// if sd.Status.Message != "" {
 	// 	ev.AddField("status_description", sd.Status.Message)
 	// }
 	ev.SendPresampled()
 }
 
-// // ExportSpan exports a span to Honeycomb
-// func (e *Exporter) ExportSpan(data *trace.SpanData) {
-// 	spew.Dump("Export Span")
-// 	spew.Dump(data)
-// 	ev := e.Builder.NewEvent()
-// 	if e.SampleFraction != 0 {
-// 		ev.SampleRate = uint(1 / e.SampleFraction)
-// 	}
-// 	if e.ServiceName != "" {
-// 		ev.AddField("service_name", e.ServiceName)
-// 	}
-// 	// ev.Timestamp = sd.StartTime
-// 	hs := honeycombSpan(data)
-// 	ev.Add(hs)
-
-// 	// Add an event field for each attribute
-// 	// if len(sd.Attributes) != 0 {
-// 	// 	for key, value := range sd.Attributes {
-// 	// 		ev.AddField(key, value)
-// 	// 	}
-// 	// }
-
-// 	// // Add an event field for status code and status message
-// 	// if sd.Status.Code != 0 {
-// 	// 	ev.AddField("status_code", sd.Status.Code)
-// 	// }
-// 	// if sd.Status.Message != "" {
-// 	// 	ev.AddField("status_description", sd.Status.Message)
-// 	// }
-// 	ev.SendPresampled()
-// }
-
 var _ trace.Exporter = (*Exporter)(nil)
 
 func honeycombSpan(s *trace.SpanData) *Span {
-	spew.Dump(s)
+	// SpanData looks like:
+	// SpanContext: (core.SpanContext) {
+	//    TraceID: (core.TraceID) {
+	// 	    High: (uint64) 4276129246450405016,
+	// 	    Low: (uint64) 10285741614377517610
+	//    },
+	//    SpanID: (uint64) 306762295059959009,
+	//    TraceOptions: (uint8) 1
+	//   },
+	//   ParentSpanID: (uint64) 0,
+	//   SpanKind: (int) 0,
+	//   Name: (string) (len=4) "/foo",
+	//   StartTime: (time.Time) 2019-09-04 15:45:23.737295 -0700 PDT m=+0.001520965,
+	//   EndTime: (time.Time) 2019-09-04 15:45:23.741027919 -0700 PDT m=+0.005253884,
+	//   Attributes: (map[string]interface {}) <nil>,
+	//   MessageEvents: ([]trace.event) <nil>,
+	//   Status: (codes.Code) OK,
+	//   HasRemoteParent: (bool) false,
+	//   DroppedAttributeCount: (int) 0,
+	//   DroppedMessageEventCount: (int) 0,
+	//   DroppedLinkCount: (int) 0,
+	//   ChildSpanCount: (int) 1
 	sc := s.SpanContext
 	hcTraceID := fmt.Sprintf("%x%016x", sc.TraceID.High, sc.TraceID.Low)
 	spew.Dump(hcTraceID)
 	hcSpan := &Span{
-		TraceID:   hcTraceID,
-		ID:        sc.SpanID,
-		Name:      s.Name,
-		Timestamp: s.StartTime,
+		TraceID:         hcTraceID,
+		ID:              sc.SpanID,
+		Name:            s.Name,
+		Timestamp:       s.StartTime,
+		HasRemoteParent: s.HasRemoteParent,
 	}
 
 	if s.ParentSpanID != (sc.SpanID) {
@@ -169,6 +184,40 @@ func honeycombSpan(s *trace.SpanData) *Span {
 	if s, e := s.StartTime, s.EndTime; !s.IsZero() && !e.IsZero() {
 		hcSpan.DurationMs = float64(e.Sub(s)) / float64(time.Millisecond)
 	}
+
+	if s.Status != codes.OK {
+		hcSpan.Error = true
+	}
+
+	// TODO: (akvanhar) add links
+	// TODO: (akvanhar) add SpanRef type
+
+	//var refs []*SpanRef
+	//for _, link := range data.Links {
+	//	refs = append(refs, &gen.SpanRef{
+	//		TraceIdHigh: bytesToInt64(link.TraceID[0:8]),
+	//		TraceIdLow:  bytesToInt64(link.TraceID[8:16]),
+	//		SpanId:      bytesToInt64(link.SpanID[:]),
+	//	})
+	//}
+
+	// var messages []*Message
+	// for _, a := range s.MessageEvents {
+	// 	fields := make([]*gen.Tag, 0, len(a.Attributes()))
+	// 	for _, kv := range a.Attributes() {
+	// 		tag := attributeToTag(kv.Key.Variable.Name, kv.Value.Emit())
+	// 		if tag != nil {
+	// 			fields = append(fields, tag)
+	// 		}
+	// 	}
+	// 	fields = append(fields, attributeToTag("message", a.Message()))
+	// 	messages = append(messages, &Message{
+	// 		//Timestamp: a.Time.UnixNano() / 1000,
+	// 		//TODO: [rghetia] update when time is supported in the event.
+	// 		Timestamp: time.Now().UnixNano() / 1000,
+	// 		Fields:    fields,
+	// 	})
+	// }
 
 	// if len(s.Annotations) != 0 || len(s.MessageEvents) != 0 {
 	// 	hcSpan.Annotations = make([]Annotation, 0, len(s.Annotations)+len(s.MessageEvents))
