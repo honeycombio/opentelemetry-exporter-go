@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"net/http"
 
@@ -20,15 +19,6 @@ import (
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 )
 
-var (
-	tracer = apitrace.GlobalTracer().
-		WithService("client").
-		WithComponent("main").
-		WithResources(
-			key.New("whatevs").String("yesss"),
-		)
-)
-
 func main() {
 	trace.Register()
 	exporter := honeycomb.NewExporter("API_KEY", "opentelemetry")
@@ -41,6 +31,14 @@ func main() {
 	// configure this to a trace.ProbabilitySampler set at the desired
 	// probability.
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+
+	tracer := apitrace.GlobalTracer().
+		WithService("client").
+		WithComponent("main").
+		WithResources(
+			key.New("whatevs").String("yesss"),
+		)
+
 	fmt.Printf("Tracer %v\n", tracer)
 	client := http.DefaultClient
 	ctx := tag.NewContext(context.Background(),
@@ -62,7 +60,7 @@ func main() {
 				panic(err)
 			}
 			body, err = ioutil.ReadAll(res.Body)
-			spew.Dump(body)
+
 			res.Body.Close()
 			apitrace.CurrentSpan(ctx).SetStatus(codes.OK)
 

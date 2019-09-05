@@ -27,19 +27,10 @@ import (
 	// _ "go.opentelemetry.io/experimental/streaming/exporter/stderr/install"
 )
 
-var (
-	tracer = apitrace.GlobalTracer().
-		WithService("server").
-		WithComponent("main").
-		WithResources(
-			key.New("whatevs").String("nooooo"),
-		)
-)
-
 func main() {
 	trace.Register()
 
-	exporter := honeycomb.NewExporter("API_KEY", "opentelemetry")
+	exporter := honeycomb.NewExporter("7754cfe678c7f6ee94a7f1ab98b37ea6", "opentelemetry")
 	exporter.ServiceName = "opentelemetry-example"
 
 	defer exporter.Close()
@@ -49,6 +40,13 @@ func main() {
 	// configure this to a trace.ProbabilitySampler set at the desired
 	// probability.
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+
+	tracer := apitrace.GlobalTracer().
+		WithService("server").
+		WithComponent("main").
+		WithResources(
+			key.New("whatevs").String("nooooo"),
+		)
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req)
