@@ -24,14 +24,13 @@ import (
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/plugin/httptrace"
 	"go.opentelemetry.io/sdk/trace"
-	// _ "go.opentelemetry.io/experimental/streaming/exporter/stderr/install"
 )
 
 func main() {
 	trace.Register()
 
-	exporter := honeycomb.NewExporter("7754cfe678c7f6ee94a7f1ab98b37ea6", "opentelemetry")
-	exporter.ServiceName = "opentelemetry-example"
+	exporter := honeycomb.NewExporter("API-KEY", "DATASET_NAME")
+	exporter.ServiceName = "server"
 
 	defer exporter.Close()
 	trace.RegisterExporter(exporter)

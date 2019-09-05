@@ -55,29 +55,6 @@ type Span struct {
 	HasRemoteParent bool         `json:"has_remote_parent"`
 }
 
-// Attributes:
-//  - Key
-//  - VType
-//  - VStr
-//  - VDouble
-//  - VBool
-//  - VLong
-//  - VBinary
-type Tag struct {
-	Key string `thrift:"key,1,required" db:"key" json:"key"`
-	// VType   TagType  `json:"vType"`
-	VStr    *string  `json:"vStr,omitempty"`
-	VDouble *float64 `thrift:"vDouble,4" db:"vDouble" json:"vDouble,omitempty"`
-	VBool   *bool    `thrift:"vBool,5" db:"vBool" json:"vBool,omitempty"`
-	VLong   *int64   `thrift:"vLong,6" db:"vLong" json:"vLong,omitempty"`
-	VBinary []byte   `thrift:"vBinary,7" db:"vBinary" json:"vBinary,omitempty"`
-}
-
-type Message struct {
-	Timestamp int64  `json:"timestamp"`
-	Fields    []*Tag `json:"fields"`
-}
-
 // Close waits for all in-flight messages to be sent. You should
 // call Close() before app termination.
 func (e *Exporter) Close() {
@@ -124,47 +101,23 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	ev.Add(hs)
 
 	// Add an event field for each attribute
-	// if len(sd.Attributes) != 0 {
-	// 	for key, value := range sd.Attributes {
-	// 		ev.AddField(key, value)
-	// 	}
-	// }
+	// Hrm. Seems like attributes are trying to tell us something about the type of span
+	// ev.Add(data.Attributes)
+	for _, a := range data.MessageEvents {
+		ev.Add(a)
+	}
 
-	// // Add an event field for status code and status message
+	// Add an event field for status code and status message
+	// Should we try to translate these status cods?
 	if data.Status != 0 {
 		ev.AddField("status_code", data.Status)
 	}
-	// if sd.Status.Message != "" {
-	// 	ev.AddField("status_description", sd.Status.Message)
-	// }
 	ev.SendPresampled()
 }
 
 var _ trace.Exporter = (*Exporter)(nil)
 
 func honeycombSpan(s *trace.SpanData) *Span {
-	// SpanData looks like:
-	// SpanContext: (core.SpanContext) {
-	//    TraceID: (core.TraceID) {
-	// 	    High: (uint64) 4276129246450405016,
-	// 	    Low: (uint64) 10285741614377517610
-	//    },
-	//    SpanID: (uint64) 306762295059959009,
-	//    TraceOptions: (uint8) 1
-	//   },
-	//   ParentSpanID: (uint64) 0,
-	//   SpanKind: (int) 0,
-	//   Name: (string) (len=4) "/foo",
-	//   StartTime: (time.Time) 2019-09-04 15:45:23.737295 -0700 PDT m=+0.001520965,
-	//   EndTime: (time.Time) 2019-09-04 15:45:23.741027919 -0700 PDT m=+0.005253884,
-	//   Attributes: (map[string]interface {}) <nil>,
-	//   MessageEvents: ([]trace.event) <nil>,
-	//   Status: (codes.Code) OK,
-	//   HasRemoteParent: (bool) false,
-	//   DroppedAttributeCount: (int) 0,
-	//   DroppedMessageEventCount: (int) 0,
-	//   DroppedLinkCount: (int) 0,
-	//   ChildSpanCount: (int) 1
 	sc := s.SpanContext
 	hcTraceUUID, _ := uuid.Parse(fmt.Sprintf("%x%016x", sc.TraceID.High, sc.TraceID.Low))
 	// TODO: what should we do with that error?
@@ -202,47 +155,5 @@ func honeycombSpan(s *trace.SpanData) *Span {
 	//		SpanId:      bytesToInt64(link.SpanID[:]),
 	//	})
 	//}
-
-	// var messages []*Message
-	// for _, a := range s.MessageEvents {
-	// 	fields := make([]*gen.Tag, 0, len(a.Attributes()))
-	// 	for _, kv := range a.Attributes() {
-	// 		tag := attributeToTag(kv.Key.Variable.Name, kv.Value.Emit())
-	// 		if tag != nil {
-	// 			fields = append(fields, tag)
-	// 		}
-	// 	}
-	// 	fields = append(fields, attributeToTag("message", a.Message()))
-	// 	messages = append(messages, &Message{
-	// 		//Timestamp: a.Time.UnixNano() / 1000,
-	// 		//TODO: [rghetia] update when time is supported in the event.
-	// 		Timestamp: time.Now().UnixNano() / 1000,
-	// 		Fields:    fields,
-	// 	})
-	// }
-
-	// if len(s.Annotations) != 0 || len(s.MessageEvents) != 0 {
-	// 	hcSpan.Annotations = make([]Annotation, 0, len(s.Annotations)+len(s.MessageEvents))
-	// 	for _, a := range s.Annotations {
-	// 		hcSpan.Annotations = append(hcSpan.Annotations, Annotation{
-	// 			Timestamp: a.Time,
-	// 			Value:     a.Message,
-	// 		})
-	// 	}
-	// 	for _, m := range s.MessageEvents {
-	// 		a := Annotation{
-	// 			Timestamp: m.Time,
-	// 		}
-	// 		switch m.EventType {
-	// 		case trace.MessageEventTypeSent:
-	// 			a.Value = "SENT"
-	// 		case trace.MessageEventTypeRecv:
-	// 			a.Value = "RECV"
-	// 		default:
-	// 			a.Value = "<?>"
-	// 		}
-	// 		hcSpan.Annotations = append(hcSpan.Annotations, a)
-	// 	}
-	// }
 	return hcSpan
 }

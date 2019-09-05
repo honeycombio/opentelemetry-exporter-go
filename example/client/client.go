@@ -21,8 +21,8 @@ import (
 
 func main() {
 	trace.Register()
-	exporter := honeycomb.NewExporter("API_KEY", "opentelemetry")
-	exporter.ServiceName = "opentelemetry-example"
+	exporter := honeycomb.NewExporter("API_KEY", "DATASET_NAME")
+	exporter.ServiceName = "client"
 
 	defer exporter.Close()
 	trace.RegisterExporter(exporter)
