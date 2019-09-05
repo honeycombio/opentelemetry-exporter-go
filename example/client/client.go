@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"net/http"
 
@@ -12,12 +13,15 @@ import (
 
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/tag"
-	"go.opentelemetry.io/api/trace"
+	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/plugin/httptrace"
+	"go.opentelemetry.io/sdk/trace"
+
+	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 )
 
 var (
-	tracer = trace.GlobalTracer().
+	tracer = apitrace.GlobalTracer().
 		WithService("client").
 		WithComponent("main").
 		WithResources(
@@ -26,6 +30,17 @@ var (
 )
 
 func main() {
+	trace.Register()
+	exporter := honeycomb.NewExporter("API_KEY", "opentelemetry")
+	exporter.ServiceName = "opentelemetry-example"
+
+	defer exporter.Close()
+	trace.RegisterExporter(exporter)
+
+	// For demoing purposes, always sample. In a production application, you should
+	// configure this to a trace.ProbabilitySampler set at the desired
+	// probability.
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 	fmt.Printf("Tracer %v\n", tracer)
 	client := http.DefaultClient
 	ctx := tag.NewContext(context.Background(),
@@ -40,15 +55,16 @@ func main() {
 
 			ctx, req, inj := httptrace.W3C(ctx, req)
 
-			trace.Inject(ctx, inj)
+			apitrace.Inject(ctx, inj)
 
 			res, err := client.Do(req)
 			if err != nil {
 				panic(err)
 			}
 			body, err = ioutil.ReadAll(res.Body)
+			spew.Dump(body)
 			res.Body.Close()
-			trace.CurrentSpan(ctx).SetStatus(codes.OK)
+			apitrace.CurrentSpan(ctx).SetStatus(codes.OK)
 
 			return err
 		})

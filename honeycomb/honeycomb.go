@@ -17,12 +17,11 @@ package honeycomb
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"time"
 
 	libhoney "github.com/honeycombio/libhoney-go"
-	// apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/trace"
 )
 
@@ -167,8 +166,11 @@ func honeycombSpan(s *trace.SpanData) *Span {
 	//   DroppedLinkCount: (int) 0,
 	//   ChildSpanCount: (int) 1
 	sc := s.SpanContext
-	hcTraceID := fmt.Sprintf("%x%016x", sc.TraceID.High, sc.TraceID.Low)
-	spew.Dump(hcTraceID)
+	hcTraceUUID, _ := uuid.Parse(fmt.Sprintf("%x%016x", sc.TraceID.High, sc.TraceID.Low))
+	// TODO: what should we do with that error?
+
+	hcTraceID := hcTraceUUID.String()
+
 	hcSpan := &Span{
 		TraceID:         hcTraceID,
 		ID:              sc.SpanID,

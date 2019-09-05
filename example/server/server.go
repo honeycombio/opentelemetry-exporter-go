@@ -15,7 +15,6 @@
 package main
 
 import (
-	"github.com/davecgh/go-spew/spew"
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 	"io"
 	"net/http"
@@ -38,11 +37,18 @@ var (
 )
 
 func main() {
-	exporter := honeycomb.NewExporter("API-KEY", "dataset-name")
-	spew.Dump("HELLO HONEYCOMB")
-	defer exporter.Close()
+	trace.Register()
 
+	exporter := honeycomb.NewExporter("API_KEY", "opentelemetry")
+	exporter.ServiceName = "opentelemetry-example"
+
+	defer exporter.Close()
 	trace.RegisterExporter(exporter)
+
+	// For demoing purposes, always sample. In a production application, you should
+	// configure this to a trace.ProbabilitySampler set at the desired
+	// probability.
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req)
