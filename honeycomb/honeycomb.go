@@ -107,11 +107,13 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 		ev.Add(a)
 	}
 
-	// Add an event field for status code and status message
-	// Should we try to translate these status cods?
+	ev.AddField("status.code", int32(data.Status))
+	ev.AddField("status.message", data.Status.String())
+	// If the status isn't zero, set error to be true
 	if data.Status != 0 {
-		ev.AddField("status_code", data.Status)
+		ev.AddField("error", true)
 	}
+
 	ev.SendPresampled()
 }
 
