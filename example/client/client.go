@@ -1,9 +1,10 @@
-// ADAPTED FROM OPENTELEMETRY HTTP EXAMPLE
+// COPIED FROM OPENTELEMETRY HTTP EXAMPLE
 
 package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -20,9 +21,13 @@ import (
 )
 
 func main() {
+	apikey := flag.String("apikey", "", "Your Honeycomb API Key")
+	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
+	flag.Parse()
+
 	trace.Register()
-	exporter := honeycomb.NewExporter("API_KEY", "DATASET_NAME")
-	exporter.ServiceName = "client"
+	exporter := honeycomb.NewExporter(*apikey, *dataset)
+	exporter.ServiceName = "opentelemetry-client"
 
 	defer exporter.Close()
 	trace.RegisterExporter(exporter)

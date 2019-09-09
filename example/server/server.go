@@ -1,12 +1,25 @@
-// ADAPTEd FROM OPENTELEMETRY HTTP EXAMPLE
+// Copyright 2019, OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package main
 
 import (
-	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
+	"flag"
 	"io"
 	"net/http"
 
+	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
@@ -15,10 +28,13 @@ import (
 )
 
 func main() {
-	trace.Register()
+	apikey := flag.String("apikey", "", "Your Honeycomb API Key")
+	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
+	flag.Parse()
 
-	exporter := honeycomb.NewExporter("API-KEY", "DATASET_NAME")
-	exporter.ServiceName = "server"
+	trace.Register()
+	exporter := honeycomb.NewExporter(*apikey, *dataset)
+	exporter.ServiceName = "opentelemetry-server"
 
 	defer exporter.Close()
 	trace.RegisterExporter(exporter)
