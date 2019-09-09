@@ -69,7 +69,7 @@ func (e *Exporter) Close() {
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
 func NewExporter(apiKey, dataset string) *Exporter {
 	// Developer note: bump this with each release
-	versionStr := "1.0.1"
+	versionStr := "0.0.1"
 	libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 
 	libhoney.Init(libhoney.Config{
