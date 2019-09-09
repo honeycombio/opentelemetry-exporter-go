@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"flag"
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 	apitrace "go.opentelemetry.io/api/trace"
@@ -11,13 +12,14 @@ import (
 )
 
 func main() {
-	trace.Register()
-	ctx := context.Background()
+	apikey := flag.String("apikey", "", "Your Honeycomb API Key")
+	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
+	flag.Parse()
 
-	// Register the Honeycomb exporter to be able to retrieve
-	// the collected spans.
-	exporter := honeycomb.NewExporter("API_KEY", "DATASET_NAME")
-	exporter.ServiceName = "opentelemetry-baseic-example"
+	trace.Register()
+	exporter := honeycomb.NewExporter(*apikey, *dataset)
+	exporter.ServiceName = "opentelemetry-basic-example"
+	ctx := context.Background()
 
 	defer exporter.Close()
 	trace.RegisterExporter(exporter)
@@ -30,8 +32,6 @@ func main() {
 	ctx, span := apitrace.GlobalTracer().Start(ctx, "/foo")
 	bar(ctx)
 	span.Finish()
-
-	// exporter.Flush()
 }
 
 func bar(ctx context.Context) {
