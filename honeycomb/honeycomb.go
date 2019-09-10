@@ -80,19 +80,20 @@ func NewExporter(apiKey, dataset string) *Exporter {
 	// default sample reate is 1: aka no sampling.
 	// set sampleRate on the exporter to be the sample rate given to the
 	// ProbabilitySampler if used.
+	// TODO (akvanhar): Figure out how OpenTelemetry handles sampling
 	return &Exporter{
-		Builder:        builder,
-		SampleFraction: 1,
-		ServiceName:    "",
+		Builder: builder,
+		// SampleFraction: 1,
+		ServiceName: "",
 	}
 }
 
 // ExportSpan exports a SpanData to Jaeger.
 func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	ev := e.Builder.NewEvent()
-	if e.SampleFraction != 0 {
-		ev.SampleRate = uint(1 / e.SampleFraction)
-	}
+	// if e.SampleFraction != 0 {
+	// 	ev.SampleRate = uint(1 / e.SampleFraction)
+	// }
 	if e.ServiceName != "" {
 		ev.AddField("service_name", e.ServiceName)
 	}
