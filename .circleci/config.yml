@@ -29,5 +29,5 @@ workflows:
     jobs:
       - test_opentelemetry:
           goversion: "11"
-      - test_beeline:
+      - test_opentelemetry:
           goversion: "12"
