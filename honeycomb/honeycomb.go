@@ -37,8 +37,11 @@ type Exporter struct {
 
 // Annotation represents an annotation with a value and a timestamp.
 type Annotation struct {
-	Timestamp time.Time `json:"timestamp"`
-	Value     string    `json:"value"`
+	Timestamp     time.Time `json:"timestamp"`
+	Name          string    `json:"name"`
+	TraceID       string    `json:"trace.trace_id"`
+	ParentID      string    `json:"trace.parent_id,omitempty"`
+	DurationMilli float64   `json:"duration_ms"`
 }
 
 // Span is the format of trace events that Honeycomb accepts
@@ -53,6 +56,13 @@ type Span struct {
 	Status          string       `json:"response.status_code,omitempty"`
 	Error           bool         `json:"error,omitempty"`
 	HasRemoteParent bool         `json:"has_remote_parent"`
+}
+
+func getHoneycombTraceID(traceIDHigh uint64, traceIDLow uint64) string {
+	hcTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", traceIDHigh, traceIDLow))
+	// TODO: what should we do with that error?
+
+	return hcTraceUUID.String()
 }
 
 // Close waits for all in-flight messages to be sent. You should
@@ -88,7 +98,7 @@ func NewExporter(apiKey, dataset string) *Exporter {
 	}
 }
 
-// ExportSpan exports a SpanData to Jaeger.
+// ExportSpan exports a SpanData to Honeycomb.
 func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	ev := e.Builder.NewEvent()
 	// if e.SampleFraction != 0 {
@@ -101,11 +111,34 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	hs := honeycombSpan(data)
 	ev.Add(hs)
 
-	// Add an event field for each attribute
-	// Hrm. Seems like attributes are trying to tell us something about the type of span
+	// TODO: (akvanhar) do something about the attributes
 	// ev.Add(data.Attributes)
+
+	// We send these message events as 0 duration spans
 	for _, a := range data.MessageEvents {
-		ev.Add(a)
+		messageEv := e.Builder.NewEvent()
+		if e.ServiceName != "" {
+			messageEv.AddField("service_name", e.ServiceName)
+		}
+
+		// TODO: (akvanhar) We can't export these as attributes are not yet exported fields
+		// if len(a.attributes) != 0 {
+		// 	for key, value := range a.attributes {
+		// 		messageEv.AddField(key, value)
+		// 	}
+		// }
+
+		// TODO: (akvanhar) This doesn't actually do anything as libhoney's Add will only add exported fields
+		messageEv.Add(a)
+		messageEv.Add(Annotation{
+			// TODO (akvanhar): Once MessageEvent.Event is publically available, pass in the timestamp
+			// Timestamp: a.time,
+			// Name: a.msg
+			TraceID:       getHoneycombTraceID(data.SpanContext.TraceID.High, data.SpanContext.TraceID.Low),
+			ParentID:      fmt.Sprintf("%d", data.SpanContext.SpanID),
+			DurationMilli: 0,
+		})
+		messageEv.SendPresampled()
 	}
 
 	ev.AddField("status.code", int32(data.Status))
@@ -121,11 +154,7 @@ var _ trace.Exporter = (*Exporter)(nil)
 
 func honeycombSpan(s *trace.SpanData) *Span {
 	sc := s.SpanContext
-	hcTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", sc.TraceID.High, sc.TraceID.Low))
-	// TODO: what should we do with that error?
-
-	hcTraceID := hcTraceUUID.String()
-
+	hcTraceID := getHoneycombTraceID(sc.TraceID.High, sc.TraceID.Low)
 	hcSpan := &Span{
 		TraceID:         hcTraceID,
 		ID:              sc.SpanID,
