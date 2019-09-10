@@ -109,7 +109,6 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	}
 
 	ev.AddField("status.code", int32(data.Status))
-	ev.AddField("status.message", data.Status.String())
 	// If the status isn't zero, set error to be true
 	if data.Status != 0 {
 		ev.AddField("error", true)
@@ -122,7 +121,7 @@ var _ trace.Exporter = (*Exporter)(nil)
 
 func honeycombSpan(s *trace.SpanData) *Span {
 	sc := s.SpanContext
-	hcTraceUUID, _ := uuid.Parse(fmt.Sprintf("%x%016x", sc.TraceID.High, sc.TraceID.Low))
+	hcTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", sc.TraceID.High, sc.TraceID.Low))
 	// TODO: what should we do with that error?
 
 	hcTraceID := hcTraceUUID.String()
