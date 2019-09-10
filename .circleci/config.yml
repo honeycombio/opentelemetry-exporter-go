@@ -1,25 +1,33 @@
-# Golang CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2
-jobs:
-  build:
-    docker:
-      # specify the version
-      - image: circleci/golang:1.9
+version: 2.1
 
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    #### TEMPLATE_NOTE: go expects specific checkout path representing url
-    #### expecting it in the form of
-    ####   /go/src/github.com/circleci/go-tool
-    ####   /go/src/bitbucket.org/circleci/go-tool
+executors:
+  go:
+    parameters:
+      goversion:
+        type: string
+        default: "11"
     working_directory: /go/src/github.com/honeycombio/opentelemetry-exporter-go
-      - checkout
+    docker:
+      - image: circleci/golang:1.<< parameters.goversion >>
 
-      # specify any bash command here prefixed with `run: `
+jobs:
+  test_opentelemetry:
+    parameters:
+      goversion:
+        type: string
+        default: "11"
+    executor:
+      name: go
+      goversion: "<< parameters.goversion >>"
+    steps:
+      - checkout
       - run: go get -v -t -d ./...
-      - run: go test -v ./...
+      - run: go test -race -v ./...
+
+workflows:
+  build:
+    jobs:
+      - test_opentelemetry:
+          goversion: "11"
+      - test_beeline:
+          goversion: "12"
