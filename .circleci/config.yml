@@ -1,0 +1,33 @@
+version: 2.1
+
+executors:
+  go:
+    parameters:
+      goversion:
+        type: string
+        default: "11"
+    working_directory: /go/src/github.com/honeycombio/opentelemetry-exporter-go
+    docker:
+      - image: circleci/golang:1.<< parameters.goversion >>
+
+jobs:
+  test_opentelemetry:
+    parameters:
+      goversion:
+        type: string
+        default: "11"
+    executor:
+      name: go
+      goversion: "<< parameters.goversion >>"
+    steps:
+      - checkout
+      - run: go get -v -t -d ./...
+      - run: go test -race -v ./...
+
+workflows:
+  build:
+    jobs:
+      - test_opentelemetry:
+          goversion: "11"
+      - test_opentelemetry:
+          goversion: "12"
