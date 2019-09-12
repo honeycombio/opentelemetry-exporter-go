@@ -66,7 +66,7 @@ func main() {
 		)
 		defer span.Finish()
 
-		span.AddEvent(ctx, "handling this...")
+		span.AddEvent(ctx, "handling this...", key.New("request-handled").Int(100))
 
 		_, _ = io.WriteString(w, "Hello, world!\n")
 	}
