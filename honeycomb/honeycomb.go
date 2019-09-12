@@ -48,8 +48,8 @@ type Annotation struct {
 type Span struct {
 	TraceID         string       `json:"trace.trace_id"`
 	Name            string       `json:"name"`
-	ID              uint64       `json:"trace.span_id"`
-	ParentID        uint64       `json:"trace.parent_id,omitempty"`
+	ID              string       `json:"trace.span_id"`
+	ParentID        string       `json:"trace.parent_id,omitempty"`
 	DurationMilli   float64      `json:"duration_ms"`
 	Timestamp       time.Time    `json:"timestamp,omitempty"`
 	Annotations     []Annotation `json:"annotations,omitempty"`
@@ -121,19 +121,13 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 			messageEv.AddField("service_name", e.ServiceName)
 		}
 
-		// TODO: (akvanhar) We can't export these as attributes are not yet exported fields
-		// if len(a.attributes) != 0 {
-		// 	for key, value := range a.attributes {
-		// 		messageEv.AddField(key, value)
-		// 	}
-		// }
+		for _, kv := range a.Attributes {
+			messageEv.AddField(kv.Key.Variable.Name, kv.Value.Emit())
+		}
 
-		// TODO: (akvanhar) This doesn't actually do anything as libhoney's Add will only add exported fields
-		messageEv.Add(a)
 		messageEv.Add(Annotation{
-			// TODO (akvanhar): Once MessageEvent.Event is publically available, pass in the timestamp
-			// Timestamp: a.time,
-			// Name: a.msg
+			Timestamp:     a.Time,
+			Name:          a.Message,
 			TraceID:       getHoneycombTraceID(data.SpanContext.TraceID.High, data.SpanContext.TraceID.Low),
 			ParentID:      fmt.Sprintf("%d", data.SpanContext.SpanID),
 			DurationMilli: 0,
@@ -157,14 +151,14 @@ func honeycombSpan(s *trace.SpanData) *Span {
 	hcTraceID := getHoneycombTraceID(sc.TraceID.High, sc.TraceID.Low)
 	hcSpan := &Span{
 		TraceID:         hcTraceID,
-		ID:              sc.SpanID,
+		ID:              fmt.Sprintf("%d", sc.SpanID),
 		Name:            s.Name,
 		Timestamp:       s.StartTime,
 		HasRemoteParent: s.HasRemoteParent,
 	}
 
-	if s.ParentSpanID != (sc.SpanID) {
-		hcSpan.ParentID = s.ParentSpanID
+	if s.ParentSpanID != sc.SpanID && s.ParentSpanID != 0 {
+		hcSpan.ParentID = fmt.Sprintf("%d", s.ParentSpanID)
 	}
 
 	if s, e := s.StartTime, s.EndTime; !s.IsZero() && !e.IsZero() {
