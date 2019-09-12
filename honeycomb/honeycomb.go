@@ -51,7 +51,6 @@ type Span struct {
 	ID              uint64       `json:"trace.span_id"`
 	ParentID        uint64       `json:"trace.parent_id,omitempty"`
 	DurationMilli   float64      `json:"duration_ms"`
-	Timestamp       time.Time    `json:"timestamp,omitempty"`
 	Annotations     []Annotation `json:"annotations,omitempty"`
 	Status          string       `json:"response.status_code,omitempty"`
 	Error           bool         `json:"error,omitempty"`
@@ -107,7 +106,8 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	if e.ServiceName != "" {
 		ev.AddField("service_name", e.ServiceName)
 	}
-	// ev.Timestamp = sd.StartTime
+
+	ev.Timestamp = data.StartTime
 	hs := honeycombSpan(data)
 	ev.Add(hs)
 
@@ -159,7 +159,6 @@ func honeycombSpan(s *trace.SpanData) *Span {
 		TraceID:         hcTraceID,
 		ID:              sc.SpanID,
 		Name:            s.Name,
-		Timestamp:       s.StartTime,
 		HasRemoteParent: s.HasRemoteParent,
 	}
 

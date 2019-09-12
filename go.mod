@@ -10,7 +10,7 @@ require (
 	github.com/honeycombio/libhoney-go v1.12.0
 	github.com/klauspost/compress v1.8.3 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	go.opentelemetry.io v0.0.0-20190909215939-9f858249798b
+	go.opentelemetry.io v0.0.0-20190909215939-9f858249798b // indirect
 	google.golang.org/grpc v1.23.0
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 )
