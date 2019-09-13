@@ -36,25 +36,23 @@ type Exporter struct {
 }
 
 // Annotation represents an annotation with a value and a timestamp.
-type Annotation struct {
-	Timestamp     time.Time `json:"timestamp"`
-	Name          string    `json:"name"`
-	TraceID       string    `json:"trace.trace_id"`
-	ParentID      string    `json:"trace.parent_id,omitempty"`
-	DurationMilli float64   `json:"duration_ms"`
+type SpanEvent struct {
+	Name          string  `json:"name"`
+	TraceID       string  `json:"trace.trace_id"`
+	ParentID      string  `json:"trace.parent_id,omitempty"`
+	DurationMilli float64 `json:"duration_ms"`
 }
 
 // Span is the format of trace events that Honeycomb accepts
 type Span struct {
-	TraceID         string       `json:"trace.trace_id"`
-	Name            string       `json:"name"`
-	ID              string       `json:"trace.span_id"`
-	ParentID        string       `json:"trace.parent_id,omitempty"`
-	DurationMilli   float64      `json:"duration_ms"`
-	Annotations     []Annotation `json:"annotations,omitempty"`
-	Status          string       `json:"response.status_code,omitempty"`
-	Error           bool         `json:"error,omitempty"`
-	HasRemoteParent bool         `json:"has_remote_parent"`
+	TraceID         string  `json:"trace.trace_id"`
+	Name            string  `json:"name"`
+	ID              string  `json:"trace.span_id"`
+	ParentID        string  `json:"trace.parent_id,omitempty"`
+	DurationMilli   float64 `json:"duration_ms"`
+	Status          string  `json:"response.status_code,omitempty"`
+	Error           bool    `json:"error,omitempty"`
+	HasRemoteParent bool    `json:"has_remote_parent"`
 }
 
 func getHoneycombTraceID(traceIDHigh uint64, traceIDLow uint64) string {
@@ -116,23 +114,23 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 
 	// We send these message events as 0 duration spans
 	for _, a := range data.MessageEvents {
-		messageEv := e.Builder.NewEvent()
+		spanEv := e.Builder.NewEvent()
 		if e.ServiceName != "" {
-			messageEv.AddField("service_name", e.ServiceName)
+			spanEv.AddField("service_name", e.ServiceName)
 		}
 
 		for _, kv := range a.Attributes {
-			messageEv.AddField(kv.Key.Variable.Name, kv.Value.Emit())
+			spanEv.AddField(kv.Key.Variable.Name, kv.Value.Emit())
 		}
+		spanEv.Timestamp = a.Time
 
-		messageEv.Add(Annotation{
-			Timestamp:     a.Time,
+		spanEv.Add(SpanEvent{
 			Name:          a.Message,
 			TraceID:       getHoneycombTraceID(data.SpanContext.TraceID.High, data.SpanContext.TraceID.Low),
 			ParentID:      fmt.Sprintf("%d", data.SpanContext.SpanID),
 			DurationMilli: 0,
 		})
-		messageEv.SendPresampled()
+		spanEv.SendPresampled()
 	}
 
 	ev.AddField("status.code", int32(data.Status))
