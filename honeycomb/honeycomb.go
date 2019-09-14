@@ -35,7 +35,7 @@ type Exporter struct {
 	ServiceName string
 }
 
-// Annotation represents an annotation with a value and a timestamp.
+// SpanEvent represents an event attached to a specific span.
 type SpanEvent struct {
 	Name          string  `json:"name"`
 	TraceID       string  `json:"trace.trace_id"`
