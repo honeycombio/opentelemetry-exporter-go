@@ -9,7 +9,11 @@
 The Exporter can be initialized as a default exporter:
 
 ```golang
-exporter := honeycomb.NewExporter(<API_KEY>, <DATASET_NAME>)
+exporter := honeycomb.NewExporter(honeycomb.Config{
+    ApiKey:  <YOUR-API-KEY>,
+    Dataset: <YOUR-DATASET>,
+    Debug:   true, // optional to output to stdout
+})
 exporter.ServiceName = "example-server"
 defer exporter.Close()
 exporter.Register()

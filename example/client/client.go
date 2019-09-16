@@ -24,8 +24,13 @@ func main() {
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
 
-	exporter := honeycomb.NewExporter(*apikey, *dataset)
-	exporter.ServiceName = "opentelemetry-client"
+	exporter := honeycomb.NewExporter(honeycomb.Config{
+		ApiKey:      *apikey,
+		Dataset:     *dataset,
+		Debug:       true,
+		ServiceName: "opentelemetry-client",
+	})
+
 	defer exporter.Close()
 	exporter.Register()
 

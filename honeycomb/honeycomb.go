@@ -25,6 +25,28 @@ import (
 	"go.opentelemetry.io/sdk/trace"
 )
 
+const (
+	defaultApiKey  = "apikey-placeholder"
+	defaultDataset = "opentelemetry"
+)
+
+type Config struct {
+	// ApiKey is your Honeycomb authentication token, available from
+	// https://ui.honeycomb.io/account. default: apikey-placeholder
+	ApiKey string
+	// Dataset is the name of the Honeycomb dataset to which events will be
+	// sent. default: beeline-go
+	Dataset string
+	// Service Name identifies your application. While optional, setting this
+	// field is extremely valuable when you instrument multiple services. If set
+	// it will be added to all events as `service_name`
+	ServiceName string
+	// Debug will emit verbose logging to STDOUT when true. If you're having
+	// trouble getting the beeline to work, set this to true in a dev
+	// environment.
+	Debug bool
+}
+
 // Exporter is an implementation of trace.Exporter that uploads a span to Honeycomb
 type Exporter struct {
 	Builder        *libhoney.Builder
@@ -33,6 +55,10 @@ type Exporter struct {
 	// field is extremely valuable when you instrument multiple services. If set
 	// it will be added to all events as `service_name`
 	ServiceName string
+	// Debug will emit verbose logging to STDOUT when true.
+	// If you're having trouble getting the exporter to work, set this to true in a dev
+	// environment
+	Debug bool
 }
 
 // SpanEvent represents an event attached to a specific span.
@@ -75,22 +101,33 @@ func (e *Exporter) Close() {
 // dataset is the name of your Honeycomb dataset to send trace events to
 //
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
-func NewExporter(apiKey, dataset string) *Exporter {
+func NewExporter(config Config) *Exporter {
 	// Developer note: bump this with each release
 	versionStr := "0.0.1"
 	libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 
-	libhoney.Init(libhoney.Config{
-		WriteKey: apiKey,
-		Dataset:  dataset,
-	})
+	if config.ApiKey == "" {
+		config.ApiKey = defaultApiKey
+	}
+	if config.Dataset == "" {
+		config.Dataset = defaultDataset
+	}
+
+	libhoneyConfig := libhoney.Config{
+		WriteKey: config.ApiKey,
+		Dataset:  config.Dataset,
+	}
+	if config.Debug {
+		libhoneyConfig.Logger = &libhoney.DefaultLogger{}
+	}
+	libhoney.Init(libhoneyConfig)
 	builder := libhoney.NewBuilder()
 
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
 	return &Exporter{
 		Builder:     builder,
-		ServiceName: "",
+		ServiceName: config.ServiceName,
 	}
 }
 
