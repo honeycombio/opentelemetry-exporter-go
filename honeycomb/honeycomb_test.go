@@ -132,7 +132,6 @@ func TestHoneycombOutput(t *testing.T) {
 	exporter.Builder = libhoney.NewBuilder()
 
 	exporter.Register()
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
 	_, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
@@ -178,7 +177,6 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	exporter.Builder = libhoney.NewBuilder()
 
 	exporter.Register()
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
 	ctx, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
 	span.AddEvent(ctx, "handling this...", key.New("request-handled").Int(100))
