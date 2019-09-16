@@ -232,4 +232,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 
 	msgEventServiceName := mockHoneycomb.Events()[0].Fields()["service_name"]
 	assert.Equal("opentelemetry-test", msgEventServiceName)
+
+	spanEvent := mockHoneycomb.Events()[0].Fields()["meta.span_event"]
+	assert.Equal(true, spanEvent)
 }
