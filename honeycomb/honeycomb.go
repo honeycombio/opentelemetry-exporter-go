@@ -96,6 +96,11 @@ func NewExporter(apiKey, dataset string) *Exporter {
 	}
 }
 
+func (e *Exporter) Register() {
+	trace.Register()
+	trace.RegisterExporter(e)
+}
+
 // ExportSpan exports a SpanData to Honeycomb.
 func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	ev := e.Builder.NewEvent()
