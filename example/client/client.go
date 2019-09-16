@@ -25,12 +25,10 @@ func main() {
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
 
-	trace.Register()
 	exporter := honeycomb.NewExporter(*apikey, *dataset)
 	exporter.ServiceName = "opentelemetry-client"
-
 	defer exporter.Close()
-	trace.RegisterExporter(exporter)
+	exporter.Register()
 
 	// For demoing purposes, always sample. In a production application, you should
 	// configure this to a trace.ProbabilitySampler set at the desired
