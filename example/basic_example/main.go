@@ -8,7 +8,6 @@ import (
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/sdk/trace"
 )
 
 func main() {
@@ -20,11 +19,6 @@ func main() {
 	exporter.ServiceName = "opentelemetry-basic-example"
 	defer exporter.Close()
 	exporter.Register()
-
-	// For demoing purposes, always sample. In a production application, you should
-	// configure this to a trace.ProbabilitySampler set at the desired
-	// probability.
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
 	ctx := context.Background()
 	ctx, span := apitrace.GlobalTracer().Start(ctx, "/foo")
