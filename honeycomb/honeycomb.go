@@ -26,9 +26,8 @@ import (
 )
 
 const (
-	defaultApiKey     = "apikey-placeholder"
-	defaultDataset    = "opentelemetry"
-	defaultSampleRate = 1
+	defaultApiKey  = "apikey-placeholder"
+	defaultDataset = "opentelemetry"
 )
 
 type Config struct {
@@ -112,9 +111,6 @@ func NewExporter(config Config) *Exporter {
 	}
 	if config.Dataset == "" {
 		config.Dataset = defaultDataset
-	}
-	if config.SampleRate == 0 {
-		config.SampleRate = defaultSampleRate
 	}
 
 	libhoneyConfig := libhoney.Config{
