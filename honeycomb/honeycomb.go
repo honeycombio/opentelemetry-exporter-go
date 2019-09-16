@@ -82,6 +82,13 @@ type Span struct {
 	HasRemoteParent bool    `json:"has_remote_parent"`
 }
 
+type Tag struct {
+	Key string `json:"tag.key"`
+	Type TagType `json:"tag.type"`
+	Str *string `json:"tag.str,omitempty"`
+	Double *float64 `json:"tag.double,omitempty"`
+}
+
 func getHoneycombTraceID(traceIDHigh uint64, traceIDLow uint64) string {
 	hcTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", traceIDHigh, traceIDLow))
 	// TODO: what should we do with that error?
@@ -97,8 +104,8 @@ func (e *Exporter) Close() {
 
 // NewExporter returns an implementation of trace.Exporter that uploads spans to Honeycomb
 //
-// writeKey is your Honeycomb writeKey (also known as your API key)
-// dataset is the name of your Honeycomb dataset to send trace events to
+// apiKey is your Honeycomb apiKey (also known as your write key)
+// dataset is the name of your Honeycomb dataset
 //
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
 func NewExporter(config Config) *Exporter {
@@ -218,4 +225,11 @@ func honeycombSpan(s *trace.SpanData) *Span {
 	//	})
 	//}
 	return hcSpan
+}
+
+func attributeToTag(key string, value string) *Tag {
+	var tag *tag
+	switch value {
+		case
+	}
 }
