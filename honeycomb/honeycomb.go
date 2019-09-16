@@ -42,17 +42,10 @@ type Config struct {
 	// field is extremely valuable when you instrument multiple services. If set
 	// it will be added to all events as `service_name`
 	ServiceName string
-	// SamplRate is a positive integer indicating the rate at which to sample
-	// events. Default sampling is at the trace level - entire traces will be
-	// kept or dropped. default: 1 (meaning no sampling)
-	SampleRate uint
 	// Debug will emit verbose logging to STDOUT when true. If you're having
 	// trouble getting the beeline to work, set this to true in a dev
 	// environment.
 	Debug bool
-	// Client, if specified, allows overriding the default client used to send events to Honeycomb
-	// If set, overrides many fields in this config - see descriptions
-	Client *libhoney.Client
 }
 
 // Exporter is an implementation of trace.Exporter that uploads a span to Honeycomb
