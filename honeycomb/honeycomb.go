@@ -85,13 +85,11 @@ func NewExporter(apiKey, dataset string) *Exporter {
 		Dataset:  dataset,
 	})
 	builder := libhoney.NewBuilder()
-	// default sample reate is 1: aka no sampling.
-	// set sampleRate on the exporter to be the sample rate given to the
-	// ProbabilitySampler if used.
-	// TODO (akvanhar): Figure out how OpenTelemetry handles sampling
+
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+
 	return &Exporter{
-		Builder: builder,
-		// SampleFraction: 1,
+		Builder:     builder,
 		ServiceName: "",
 	}
 }
@@ -104,9 +102,7 @@ func (e *Exporter) Register() {
 // ExportSpan exports a SpanData to Honeycomb.
 func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	ev := e.Builder.NewEvent()
-	// if e.SampleFraction != 0 {
-	// 	ev.SampleRate = uint(1 / e.SampleFraction)
-	// }
+
 	if e.ServiceName != "" {
 		ev.AddField("service_name", e.ServiceName)
 	}
