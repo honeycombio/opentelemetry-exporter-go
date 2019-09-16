@@ -121,7 +121,6 @@ func TestHoneycombOutput(t *testing.T) {
 	mockHoneycomb := &libhoney.MockOutput{}
 	assert := assert.New(t)
 
-	trace.Register()
 	exporter := NewExporter("overridden", "overridden")
 	exporter.ServiceName = "opentelemetry-test"
 
@@ -132,7 +131,7 @@ func TestHoneycombOutput(t *testing.T) {
 	})
 	exporter.Builder = libhoney.NewBuilder()
 
-	trace.RegisterExporter(exporter)
+	exporter.Register()
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
 	_, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
@@ -168,7 +167,6 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	mockHoneycomb := &libhoney.MockOutput{}
 	assert := assert.New(t)
 
-	trace.Register()
 	exporter := NewExporter("overridden", "overridden")
 	exporter.ServiceName = "opentelemetry-test"
 
@@ -179,7 +177,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	})
 	exporter.Builder = libhoney.NewBuilder()
 
-	trace.RegisterExporter(exporter)
+	exporter.Register()
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
 	ctx, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
