@@ -159,7 +159,7 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 		}
 
 		for _, kv := range a.Attributes {
-			spanEv.AddField(kv.Key.Variable.Name, kv.Value.Emit())
+			spanEv.AddField(kv.Key.Name, kv.Value.Emit())
 		}
 		spanEv.Timestamp = a.Time
 

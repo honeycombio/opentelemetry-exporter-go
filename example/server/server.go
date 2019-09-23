@@ -49,7 +49,7 @@ func main() {
 		)
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
-		attrs, tags, spanCtx := httptrace.Extract(req)
+		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
 
 		req = req.WithContext(tag.WithMap(req.Context(), tag.NewMap(tag.MapUpdate{
 			MultiKV: tags,
