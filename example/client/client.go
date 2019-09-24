@@ -53,9 +53,8 @@ func main() {
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)
 
-			ctx, req, inj := httptrace.W3C(ctx, req)
-
-			apitrace.Inject(ctx, inj)
+			ctx, req = httptrace.W3C(ctx, req)
+			httptrace.Inject(ctx, req)
 
 			res, err := client.Do(req)
 			if err != nil {
