@@ -67,7 +67,7 @@ type SpanEvent struct {
 	TraceID       string  `json:"trace.trace_id"`
 	ParentID      string  `json:"trace.parent_id,omitempty"`
 	DurationMilli float64 `json:"duration_ms"`
-	SpanEvent     bool    `json:"meta.span_event"`
+	SpanEventType string  `json:"meta.span_type"`
 }
 
 // Span is the format of trace events that Honeycomb accepts
@@ -168,7 +168,7 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 			TraceID:       getHoneycombTraceID(data.SpanContext.TraceID.High, data.SpanContext.TraceID.Low),
 			ParentID:      fmt.Sprintf("%d", data.SpanContext.SpanID),
 			DurationMilli: 0,
-			SpanEvent:     true,
+			SpanEventType: "span_event",
 		})
 		spanEv.SendPresampled()
 	}
