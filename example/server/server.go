@@ -63,6 +63,7 @@ func main() {
 		)
 		defer span.Finish()
 
+		span.SetAttribute(key.New("ex.com/another").String("yes"))
 		span.AddEvent(ctx, "handling this...", key.New("request-handled").Int(100))
 
 		_, _ = io.WriteString(w, "Hello, world!\n")

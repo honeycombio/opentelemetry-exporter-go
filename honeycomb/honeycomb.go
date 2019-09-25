@@ -18,6 +18,7 @@ package honeycomb
 import (
 	"fmt"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/api/core"
 	"google.golang.org/grpc/codes"
 	"time"
 
@@ -80,13 +81,6 @@ type Span struct {
 	Status          string  `json:"response.status_code,omitempty"`
 	Error           bool    `json:"error,omitempty"`
 	HasRemoteParent bool    `json:"has_remote_parent"`
-}
-
-type Tag struct {
-	Key string `json:"tag.key"`
-	Type TagType `json:"tag.type"`
-	Str *string `json:"tag.str,omitempty"`
-	Double *float64 `json:"tag.double,omitempty"`
 }
 
 func getHoneycombTraceID(traceIDHigh uint64, traceIDLow uint64) string {
@@ -155,9 +149,6 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	hs := honeycombSpan(data)
 	ev.Add(hs)
 
-	// TODO: (akvanhar) do something about the attributes
-	// ev.Add(data.Attributes)
-
 	// We send these message events as 0 duration spans
 	for _, a := range data.MessageEvents {
 		spanEv := e.Builder.NewEvent()
@@ -178,6 +169,10 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 			SpanEventType: "span_event",
 		})
 		spanEv.SendPresampled()
+	}
+	for name, value := range data.Attributes {
+		// TODO: What will libhoney do if value is nil?
+		ev.AddField(getValueFromAttribute(name, value))
 	}
 
 	ev.AddField("status.code", int32(data.Status))
@@ -227,9 +222,27 @@ func honeycombSpan(s *trace.SpanData) *Span {
 	return hcSpan
 }
 
-func attributeToTag(key string, value string) *Tag {
-	var tag *tag
-	switch value {
-		case
+func getValueFromAttribute(key string, value interface{}) (string, interface{}) {
+	var tagValue interface{}
+	switch value := value.(type) {
+	case core.Value:
+		fmt.Println("core.value")
+		switch value.Type {
+		case core.BOOL:
+			tagValue = value.Bool
+		case core.INT64:
+			tagValue = value.Int64
+		case core.UINT64:
+			tagValue = value.Uint64
+		case core.FLOAT64:
+			tagValue = value.Float64
+		case core.STRING:
+			tagValue = value.String
+		case core.BYTES:
+			tagValue = value.Bytes
+		}
+	default:
+		tagValue = value
 	}
+	return key, tagValue
 }
