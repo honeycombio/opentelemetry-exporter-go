@@ -170,9 +170,8 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 		})
 		spanEv.SendPresampled()
 	}
-	for name, value := range data.Attributes {
-		// TODO: What will libhoney do if value is nil?
-		ev.AddField(getValueFromAttribute(name, value))
+	for _, kv := range data.Attributes {
+		ev.AddField(getValueFromCoreAttribute(kv))
 	}
 
 	ev.AddField("status.code", int32(data.Status))
@@ -222,27 +221,21 @@ func honeycombSpan(s *trace.SpanData) *Span {
 	return hcSpan
 }
 
-func getValueFromAttribute(key string, value interface{}) (string, interface{}) {
+func getValueFromCoreAttribute(kv core.KeyValue) (string, interface{}) {
 	var tagValue interface{}
-	switch value := value.(type) {
-	case core.Value:
-		fmt.Println("core.value")
-		switch value.Type {
-		case core.BOOL:
-			tagValue = value.Bool
-		case core.INT64:
-			tagValue = value.Int64
-		case core.UINT64:
-			tagValue = value.Uint64
-		case core.FLOAT64:
-			tagValue = value.Float64
-		case core.STRING:
-			tagValue = value.String
-		case core.BYTES:
-			tagValue = value.Bytes
-		}
-	default:
-		tagValue = value
+	switch kv.Value.Type {
+	case core.BOOL:
+		tagValue = kv.Value.Bool
+	case core.INT64:
+		tagValue = kv.Value.Int64
+	case core.UINT64:
+		tagValue = kv.Value.Uint64
+	case core.FLOAT64:
+		tagValue = kv.Value.Float64
+	case core.STRING:
+		tagValue = kv.Value.String
+	case core.BYTES:
+		tagValue = kv.Value.Bytes
 	}
-	return key, tagValue
+	return kv.Key.Name, tagValue
 }
