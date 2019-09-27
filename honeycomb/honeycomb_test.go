@@ -145,7 +145,7 @@ func TestHoneycombOutput(t *testing.T) {
 	span.SetAttribute(key.New("ex.com/nil").String(nilString))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
-	span.Finish()
+	span.End()
 
 	assert.Equal(1, len(mockHoneycomb.Events()))
 	mainEventFields := mockHoneycomb.Events()[0].Fields()
@@ -206,7 +206,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	span.AddEvent(ctx, "handling this...", key.New("request-handled").Int(100))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
-	span.Finish()
+	span.End()
 
 	assert.Equal(2, len(mockHoneycomb.Events()))
 
