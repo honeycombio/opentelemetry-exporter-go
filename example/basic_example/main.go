@@ -28,12 +28,12 @@ func main() {
 	ctx := context.Background()
 	ctx, span := apitrace.GlobalTracer().Start(ctx, "/foo")
 	bar(ctx)
-	span.Finish()
+	span.End()
 }
 
 func bar(ctx context.Context) {
 	_, span := apitrace.GlobalTracer().Start(ctx, "/bar")
-	defer span.Finish()
+	defer span.End()
 
 	// Do bar...
 }

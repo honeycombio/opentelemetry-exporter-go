@@ -61,7 +61,7 @@ func main() {
 			apitrace.WithAttributes(attrs...),
 			apitrace.ChildOf(spanCtx),
 		)
-		defer span.Finish()
+		defer span.End()
 
 		span.SetAttribute(key.New("ex.com/another").String("yes"))
 		span.AddEvent(ctx, "handling this...", key.New("request-handled").Int(100))
