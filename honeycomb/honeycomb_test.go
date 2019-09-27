@@ -137,33 +137,51 @@ func TestHoneycombOutput(t *testing.T) {
 	exporter.Register()
 
 	_, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
+	span.SetAttribute(key.New("ex.com/string").String("yes"))
+	span.SetAttribute(key.New("ex.com/bool").Bool(true))
+	span.SetAttribute(key.New("ex.com/int64").Int64(42))
+	span.SetAttribute(key.New("ex.com/float64").Float64(3.14))
+	var nilString string
+	span.SetAttribute(key.New("ex.com/nil").String(nilString))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.Finish()
 
 	assert.Equal(1, len(mockHoneycomb.Events()))
-	traceID := mockHoneycomb.Events()[0].Fields()["trace.trace_id"]
+	mainEventFields := mockHoneycomb.Events()[0].Fields()
+	traceID := mainEventFields["trace.trace_id"]
 	honeycombTranslatedTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", span.SpanContext().TraceID.High, span.SpanContext().TraceID.Low))
 	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
-	spanID := mockHoneycomb.Events()[0].Fields()["trace.span_id"]
+	spanID := mainEventFields["trace.span_id"]
 	expectedSpanID := fmt.Sprintf("%d", span.SpanContext().SpanID)
 	assert.Equal(expectedSpanID, spanID)
 
-	name := mockHoneycomb.Events()[0].Fields()["name"]
+	name := mainEventFields["name"]
 	assert.Equal("myTestSpan", name)
 
-	durationMilli := mockHoneycomb.Events()[0].Fields()["duration_ms"]
+	durationMilli := mainEventFields["duration_ms"]
 	durationMilliFl, ok := durationMilli.(float64)
 	assert.Equal(ok, true)
 	assert.Equal((durationMilliFl > 0), true)
 	assert.Equal((durationMilliFl < 1), true)
 
-	serviceName := mockHoneycomb.Events()[0].Fields()["service_name"]
+	serviceName := mainEventFields["service_name"]
 	assert.Equal("opentelemetry-test", serviceName)
 	assert.Equal(mockHoneycomb.Events()[0].Dataset, "test")
+
+	attribute := mainEventFields["ex.com/string"]
+	assert.Equal("yes", attribute)
+	attribute = mainEventFields["ex.com/bool"]
+	assert.Equal(true, attribute)
+	attribute = mainEventFields["ex.com/int64"]
+	assert.Equal(int64(42), attribute)
+	attribute = mainEventFields["ex.com/float64"]
+	assert.Equal(3.14, attribute)
+	attribute = mainEventFields["ex.com/nil"]
+	assert.Equal("", attribute)
 }
 func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	mockHoneycomb := &libhoney.MockOutput{}
@@ -193,48 +211,50 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal(2, len(mockHoneycomb.Events()))
 
 	// Check the fields on the main span event
-	traceID := mockHoneycomb.Events()[1].Fields()["trace.trace_id"]
+	messageEventFields := mockHoneycomb.Events()[1].Fields()
+	traceID := messageEventFields["trace.trace_id"]
 	honeycombTranslatedTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", span.SpanContext().TraceID.High, span.SpanContext().TraceID.Low))
 	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
-	spanID := mockHoneycomb.Events()[1].Fields()["trace.span_id"]
+	spanID := messageEventFields["trace.span_id"]
 	expectedSpanID := fmt.Sprintf("%d", span.SpanContext().SpanID)
 	assert.Equal(expectedSpanID, spanID)
 
-	name := mockHoneycomb.Events()[1].Fields()["name"]
+	name := messageEventFields["name"]
 	assert.Equal("myTestSpan", name)
 
-	durationMilli := mockHoneycomb.Events()[1].Fields()["duration_ms"]
+	durationMilli := messageEventFields["duration_ms"]
 	durationMilliFl, ok := durationMilli.(float64)
 	assert.Equal(ok, true)
 	assert.Equal((durationMilliFl > 0), true)
 	assert.Equal((durationMilliFl < 1), true)
 
-	serviceName := mockHoneycomb.Events()[1].Fields()["service_name"]
+	serviceName := messageEventFields["service_name"]
 	assert.Equal("opentelemetry-test", serviceName)
 	assert.Equal(mockHoneycomb.Events()[1].Dataset, "test")
 
 	// Check the fields on the 0 duration Message Event
-	msgEventName := mockHoneycomb.Events()[0].Fields()["name"]
+	mainEventFields := mockHoneycomb.Events()[0].Fields()
+	msgEventName := mainEventFields["name"]
 	assert.Equal("handling this...", msgEventName)
 
-	attribute := mockHoneycomb.Events()[0].Fields()["request-handled"]
+	attribute := mainEventFields["request-handled"]
 	assert.Equal("100", attribute)
 
-	msgEventTraceID := mockHoneycomb.Events()[0].Fields()["trace.trace_id"]
+	msgEventTraceID := mainEventFields["trace.trace_id"]
 	assert.Equal(honeycombTranslatedTraceID, msgEventTraceID)
 
-	msgEventParentID := mockHoneycomb.Events()[0].Fields()["trace.parent_id"]
+	msgEventParentID := mainEventFields["trace.parent_id"]
 	assert.Equal(spanID, msgEventParentID)
 
-	msgEventDurationMilli := mockHoneycomb.Events()[0].Fields()["duration_ms"]
+	msgEventDurationMilli := mainEventFields["duration_ms"]
 	assert.Equal(float64(0), msgEventDurationMilli)
 
-	msgEventServiceName := mockHoneycomb.Events()[0].Fields()["service_name"]
+	msgEventServiceName := mainEventFields["service_name"]
 	assert.Equal("opentelemetry-test", msgEventServiceName)
 
-	spanEvent := mockHoneycomb.Events()[0].Fields()["meta.span_type"]
+	spanEvent := mainEventFields["meta.span_type"]
 	assert.Equal("span_event", spanEvent)
 }

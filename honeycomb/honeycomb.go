@@ -18,6 +18,7 @@ package honeycomb
 import (
 	"fmt"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/api/core"
 	"google.golang.org/grpc/codes"
 	"time"
 
@@ -97,8 +98,8 @@ func (e *Exporter) Close() {
 
 // NewExporter returns an implementation of trace.Exporter that uploads spans to Honeycomb
 //
-// writeKey is your Honeycomb writeKey (also known as your API key)
-// dataset is the name of your Honeycomb dataset to send trace events to
+// apiKey is your Honeycomb apiKey (also known as your write key)
+// dataset is the name of your Honeycomb dataset
 //
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
 func NewExporter(config Config) *Exporter {
@@ -148,9 +149,6 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	hs := honeycombSpan(data)
 	ev.Add(hs)
 
-	// TODO: (akvanhar) do something about the attributes
-	// ev.Add(data.Attributes)
-
 	// We send these message events as 0 duration spans
 	for _, a := range data.MessageEvents {
 		spanEv := e.Builder.NewEvent()
@@ -171,6 +169,9 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 			SpanEventType: "span_event",
 		})
 		spanEv.SendPresampled()
+	}
+	for _, kv := range data.Attributes {
+		ev.AddField(getValueFromCoreAttribute(kv))
 	}
 
 	ev.AddField("status.code", int32(data.Status))
@@ -218,4 +219,23 @@ func honeycombSpan(s *trace.SpanData) *Span {
 	//	})
 	//}
 	return hcSpan
+}
+
+func getValueFromCoreAttribute(kv core.KeyValue) (string, interface{}) {
+	var tagValue interface{}
+	switch kv.Value.Type {
+	case core.BOOL:
+		tagValue = kv.Value.Bool
+	case core.INT64:
+		tagValue = kv.Value.Int64
+	case core.UINT64:
+		tagValue = kv.Value.Uint64
+	case core.FLOAT64:
+		tagValue = kv.Value.Float64
+	case core.STRING:
+		tagValue = kv.Value.String
+	case core.BYTES:
+		tagValue = kv.Value.Bytes
+	}
+	return kv.Key.Name, tagValue
 }
