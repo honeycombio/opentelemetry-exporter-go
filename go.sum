@@ -160,6 +160,8 @@ go.opentelemetry.io v0.0.0-20190925202233-a853377a2f20 h1:1WJpOvUU0N57Of+NoTk6gT
 go.opentelemetry.io v0.0.0-20190925202233-a853377a2f20/go.mod h1:VF9PBNPSge951KUkrUYh7v7aFveupnf41xNfNCyQu2k=
 go.opentelemetry.io v0.0.0-20190927174810-0eb73325ce9e h1:Cj5b7CHiXZapV2cdbEhbd2JYsIpCLKrOTNhjLIf5hpQ=
 go.opentelemetry.io v0.0.0-20190927174810-0eb73325ce9e/go.mod h1:VF9PBNPSge951KUkrUYh7v7aFveupnf41xNfNCyQu2k=
+go.opentelemetry.io v0.0.0-20190928182702-fa7d05379372 h1:JenH1h3DTQIuOwcc2M4vw9lDy/SutHFfWnqt/8NpPu0=
+go.opentelemetry.io v0.0.0-20190928182702-fa7d05379372/go.mod h1:VF9PBNPSge951KUkrUYh7v7aFveupnf41xNfNCyQu2k=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20190313024323-a1f597ede03a/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
