@@ -46,6 +46,9 @@ type Config struct {
 	// trouble getting the beeline to work, set this to true in a dev
 	// environment.
 	Debug bool
+	// APIHost is the hostname for the Honeycomb API server to which to send
+	// these events. default: https://api.honeycomb.io/
+	APIHost string
 }
 
 // Exporter is an implementation of trace.Exporter that uploads a span to Honeycomb
@@ -121,6 +124,10 @@ func NewExporter(config Config) *Exporter {
 	if config.Debug {
 		libhoneyConfig.Logger = &libhoney.DefaultLogger{}
 	}
+	if config.APIHost != "" {
+		libhoneyConfig.APIHost = config.APIHost
+	}
+
 	libhoney.Init(libhoneyConfig)
 	builder := libhoney.NewBuilder()
 
