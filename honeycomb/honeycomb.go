@@ -47,7 +47,7 @@ type Config struct {
 	// environment.
 	Debug bool
 	// APIHost is the hostname for the Honeycomb API server to which to send
-	// this event. default: https://api.honeycomb.io/
+	// these events. default: https://api.honeycomb.io/
 	APIHost string
 }
 
