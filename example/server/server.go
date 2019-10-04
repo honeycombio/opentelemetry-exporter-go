@@ -41,13 +41,6 @@ func main() {
 	defer exporter.Close()
 	exporter.Register()
 
-	tracer := apitrace.GlobalTracer().
-		WithService("server").
-		WithComponent("main").
-		WithResources(
-			key.New("whatevs").String("nooooo"),
-		)
-
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
 
@@ -55,7 +48,7 @@ func main() {
 			MultiKV: tags,
 		})))
 
-		ctx, span := tracer.Start(
+		ctx, span := apitrace.GlobalTracer().Start(
 			req.Context(),
 			"hello",
 			apitrace.WithAttributes(attrs...),
