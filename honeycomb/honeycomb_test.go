@@ -229,7 +229,6 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	durationMilliFl, ok := durationMilli.(float64)
 	assert.Equal(ok, true)
 	assert.Equal((durationMilliFl > 0), true)
-	assert.Equal((durationMilliFl < 1), true)
 
 	serviceName := messageEventFields["service_name"]
 	assert.Equal("opentelemetry-test", serviceName)
