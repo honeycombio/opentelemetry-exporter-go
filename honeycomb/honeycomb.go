@@ -141,7 +141,9 @@ func NewExporter(config Config) *Exporter {
 
 func (e *Exporter) Register() {
 	trace.Register()
-	trace.RegisterExporter(e)
+	// Wrap the exporter with SimpleSpanProcessor and register the processor.
+	ssp := trace.NewSimpleSpanProcessor(e)
+	trace.RegisterSpanProcessor(ssp)
 }
 
 // ExportSpan exports a SpanData to Honeycomb.
