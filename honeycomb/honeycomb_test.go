@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
 	apitrace "go.opentelemetry.io/api/trace"
-	"go.opentelemetry.io/sdk/trace"
+	"go.opentelemetry.io/sdk/export"
 )
 
 func TestExport(t *testing.T) {
@@ -23,16 +23,16 @@ func TestExport(t *testing.T) {
 	traceID := core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f10}
 	spanID := uint64(0x0102030405060708)
 	expectedTraceID := "01020304-0506-0708-090a-0b0c0d0e0f10"
-	expectedSpanID := "72623859790382856"
+	expectedSpanID := "0102030405060708"
 
 	tests := []struct {
 		name string
-		data *trace.SpanData
+		data *export.SpanData
 		want *Span
 	}{
 		{
 			name: "no parent",
-			data: &trace.SpanData{
+			data: &export.SpanData{
 				SpanContext: core.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -51,7 +51,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "1 day duration",
-			data: &trace.SpanData{
+			data: &export.SpanData{
 				SpanContext: core.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -70,7 +70,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "status code OK",
-			data: &trace.SpanData{
+			data: &export.SpanData{
 				SpanContext: core.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -90,7 +90,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "status code not OK",
-			data: &trace.SpanData{
+			data: &export.SpanData{
 				SpanContext: core.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -156,7 +156,7 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
 	spanID := mainEventFields["trace.span_id"]
-	expectedSpanID := fmt.Sprintf("%d", span.SpanContext().SpanID)
+	expectedSpanID := span.SpanContext().SpanIDString()
 	assert.Equal(expectedSpanID, spanID)
 
 	name := mainEventFields["name"]
@@ -219,7 +219,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
 	spanID := messageEventFields["trace.span_id"]
-	expectedSpanID := fmt.Sprintf("%d", span.SpanContext().SpanID)
+	expectedSpanID := span.SpanContext().SpanIDString()
 	assert.Equal(expectedSpanID, spanID)
 
 	name := messageEventFields["name"]

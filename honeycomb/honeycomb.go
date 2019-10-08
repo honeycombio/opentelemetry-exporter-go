@@ -16,6 +16,7 @@
 package honeycomb
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/api/core"
@@ -23,6 +24,7 @@ import (
 	"time"
 
 	libhoney "github.com/honeycombio/libhoney-go"
+	"go.opentelemetry.io/sdk/export"
 	"go.opentelemetry.io/sdk/trace"
 )
 
@@ -86,8 +88,8 @@ type Span struct {
 	HasRemoteParent bool    `json:"has_remote_parent"`
 }
 
-func getHoneycombTraceID(traceIDHigh uint64, traceIDLow uint64) string {
-	hcTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", traceIDHigh, traceIDLow))
+func getHoneycombTraceID(traceID string) string {
+	hcTraceUUID, _ := uuid.Parse(traceID)
 	// TODO: what should we do with that error?
 
 	return hcTraceUUID.String()
@@ -147,7 +149,7 @@ func (e *Exporter) Register() {
 }
 
 // ExportSpan exports a SpanData to Honeycomb.
-func (e *Exporter) ExportSpan(data *trace.SpanData) {
+func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 	ev := e.Builder.NewEvent()
 
 	if e.ServiceName != "" {
@@ -172,8 +174,8 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 
 		spanEv.Add(SpanEvent{
 			Name:          a.Message,
-			TraceID:       getHoneycombTraceID(data.SpanContext.TraceID.High, data.SpanContext.TraceID.Low),
-			ParentID:      fmt.Sprintf("%d", data.SpanContext.SpanID),
+			TraceID:       getHoneycombTraceID(data.SpanContext.TraceIDString()),
+			ParentID:      data.SpanContext.SpanIDString(),
 			DurationMilli: 0,
 			SpanEventType: "span_event",
 		})
@@ -192,14 +194,14 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	ev.SendPresampled()
 }
 
-var _ trace.Exporter = (*Exporter)(nil)
+var _ export.SpanSyncer = (*Exporter)(nil)
 
-func honeycombSpan(s *trace.SpanData) *Span {
+func honeycombSpan(s *export.SpanData) *Span {
 	sc := s.SpanContext
-	hcTraceID := getHoneycombTraceID(sc.TraceID.High, sc.TraceID.Low)
+
 	hcSpan := &Span{
-		TraceID:         hcTraceID,
-		ID:              fmt.Sprintf("%d", sc.SpanID),
+		TraceID:         getHoneycombTraceID(s.SpanContext.TraceIDString()),
+		ID:              s.SpanContext.SpanIDString(),
 		Name:            s.Name,
 		HasRemoteParent: s.HasRemoteParent,
 	}
