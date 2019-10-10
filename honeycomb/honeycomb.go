@@ -88,10 +88,11 @@ type Span struct {
 	HasRemoteParent bool    `json:"has_remote_parent"`
 }
 
-func getHoneycombTraceID(traceID string) string {
-	hcTraceUUID, _ := uuid.Parse(traceID)
-	// TODO: what should we do with that error?
-
+func getHoneycombTraceID(traceIDHigh uint64, traceIDLow uint64) string {
+	hcTraceUUID, err := uuid.Parse(fmt.Sprintf("%016x%016x", traceIDHigh, traceIDLow))
+	if err != nil {
+		return ""
+	}
 	return hcTraceUUID.String()
 }
 
@@ -174,8 +175,8 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 
 		spanEv.Add(SpanEvent{
 			Name:          a.Message,
-			TraceID:       getHoneycombTraceID(data.SpanContext.TraceIDString()),
-			ParentID:      data.SpanContext.SpanIDString(),
+			TraceID:       getHoneycombTraceID(data.SpanContext.TraceID.High, data.SpanContext.TraceID.Low),
+			ParentID:      fmt.Sprintf("%d", data.SpanContext.SpanID),
 			DurationMilli: 0,
 			SpanEventType: "span_event",
 		})
@@ -200,12 +201,11 @@ func honeycombSpan(s *export.SpanData) *Span {
 	sc := s.SpanContext
 
 	hcSpan := &Span{
-		TraceID:         getHoneycombTraceID(s.SpanContext.TraceIDString()),
-		ID:              s.SpanContext.SpanIDString(),
+		TraceID:         getHoneycombTraceID(sc.TraceID.High, sc.TraceID.Low),
+		ID:              fmt.Sprintf("%d", sc.SpanID),
 		Name:            s.Name,
 		HasRemoteParent: s.HasRemoteParent,
 	}
-
 	if s.ParentSpanID != sc.SpanID && s.ParentSpanID != 0 {
 		hcSpan.ParentID = fmt.Sprintf("%d", s.ParentSpanID)
 	}

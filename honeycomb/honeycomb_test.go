@@ -23,7 +23,7 @@ func TestExport(t *testing.T) {
 	traceID := core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f10}
 	spanID := uint64(0x0102030405060708)
 	expectedTraceID := "01020304-0506-0708-090a-0b0c0d0e0f10"
-	expectedSpanID := "0102030405060708"
+	expectedSpanID := "72623859790382856"
 
 	tests := []struct {
 		name string
@@ -156,7 +156,7 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
 	spanID := mainEventFields["trace.span_id"]
-	expectedSpanID := span.SpanContext().SpanIDString()
+	expectedSpanID := fmt.Sprintf("%d", span.SpanContext().SpanID)
 	assert.Equal(expectedSpanID, spanID)
 
 	name := mainEventFields["name"]
@@ -219,7 +219,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
 	spanID := messageEventFields["trace.span_id"]
-	expectedSpanID := span.SpanContext().SpanIDString()
+	expectedSpanID := fmt.Sprintf("%d", span.SpanContext().SpanID)
 	assert.Equal(expectedSpanID, spanID)
 
 	name := messageEventFields["name"]
