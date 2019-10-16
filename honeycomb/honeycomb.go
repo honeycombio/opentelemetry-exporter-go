@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"go.opentelemetry.io/api/core"
 	"google.golang.org/grpc/codes"
+	"log"
 	"sync"
 	"time"
 
@@ -52,6 +53,10 @@ type Config struct {
 	// APIHost is the hostname for the Honeycomb API server to which to send
 	// these events. default: https://api.honeycomb.io/
 	APIHost string
+	// OnError is the hook to be called when there is
+	// an error occurred when uploading the span data.
+	// If no custom hook is set, errors are logged.
+	OnError func(err error)
 }
 
 // Exporter is an implementation of trace.Exporter that uploads a span to Honeycomb
@@ -67,6 +72,10 @@ type Exporter struct {
 	// If you're having trouble getting the exporter to work, set this to true in a dev
 	// environment
 	Debug bool
+	// OnError is the hook to be called when there is
+	// an error occurred when uploading the span data.
+	// If no custom hook is set, errors are logged.
+	OnError func(err error)
 }
 
 // SpanEvent represents an event attached to a specific span.
@@ -110,9 +119,9 @@ func (e *Exporter) Close() {
 // dataset is the name of your Honeycomb dataset
 //
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
-func NewExporter(config Config) *Exporter {
+func NewExporter(config Config) (*Exporter, error) {
 	// Developer note: bump this with each release
-	versionStr := "0.0.1"
+	versionStr := "0.0.4"
 	libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 
 	if config.ApiKey == "" {
@@ -133,15 +142,27 @@ func NewExporter(config Config) *Exporter {
 		libhoneyConfig.APIHost = config.APIHost
 	}
 
-	libhoney.Init(libhoneyConfig)
+	err := libhoney.Init(libhoneyConfig)
+	if err != nil {
+		return nil, err
+	}
 	builder := libhoney.NewBuilder()
 
 	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
+	onError := func(err error) {
+		if config.OnError != nil {
+			config.OnError(err)
+			return
+		}
+		log.Printf("Error when sending spans to Honeycomb: %v", err)
+	}
+
 	return &Exporter{
 		Builder:     builder,
 		ServiceName: config.ServiceName,
-	}
+		OnError:     onError,
+	}, nil
 }
 
 func (e *Exporter) RegisterSimpleSpanProcessor() {
@@ -183,7 +204,8 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 			DurationMilli: 0,
 			SpanEventType: "span_event",
 		})
-		spanEv.SendPresampled()
+		err := spanEv.SendPresampled()
+		e.OnError(err)
 	}
 	for _, kv := range data.Attributes {
 		ev.AddField(getValueFromCoreAttribute(kv))
@@ -195,7 +217,8 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 		ev.AddField("error", true)
 	}
 
-	ev.SendPresampled()
+	err := ev.SendPresampled()
+	e.OnError(err)
 }
 
 var _ export.SpanSyncer = (*Exporter)(nil)

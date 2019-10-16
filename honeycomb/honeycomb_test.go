@@ -122,11 +122,12 @@ func TestHoneycombOutput(t *testing.T) {
 	mockHoneycomb := &libhoney.MockOutput{}
 	assert := assert.New(t)
 
-	exporter := NewExporter(Config{
+	exporter, err := NewExporter(Config{
 		ApiKey:      "overridden",
 		Dataset:     "overridden",
 		ServiceName: "opentelemetry-test",
 	})
+	assert.Equal(err, nil)
 
 	libhoney.Init(libhoney.Config{
 		WriteKey: "test",
@@ -189,11 +190,12 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	mockHoneycomb := &libhoney.MockOutput{}
 	assert := assert.New(t)
 
-	exporter := NewExporter(Config{
+	exporter, err := NewExporter(Config{
 		ApiKey:      "overridden",
 		Dataset:     "overridden",
 		ServiceName: "opentelemetry-test",
 	})
+	assert.Equal(err, nil)
 
 	libhoney.Init(libhoney.Config{
 		WriteKey: "test",

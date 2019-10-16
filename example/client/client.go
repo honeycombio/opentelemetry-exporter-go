@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"google.golang.org/grpc/codes"
@@ -27,12 +28,13 @@ func main() {
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
 
-	exporter := honeycomb.NewExporter(honeycomb.Config{
+	exporter, err := honeycomb.NewExporter(honeycomb.Config{
 		ApiKey:      *apikey,
 		Dataset:     *dataset,
 		Debug:       true,
 		ServiceName: "opentelemetry-client",
 	})
+	log.Fatal(err)
 
 	defer exporter.Close()
 	exporter.RegisterSimpleSpanProcessor()
@@ -44,7 +46,7 @@ func main() {
 
 	var body []byte
 
-	err := apitrace.GlobalTracer().WithSpan(ctx, "say hello",
+	err = apitrace.GlobalTracer().WithSpan(ctx, "say hello",
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", "http://localhost:7777/hello", nil)
 
