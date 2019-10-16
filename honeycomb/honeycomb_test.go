@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/api/key"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/sdk/export"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
 func TestExport(t *testing.T) {
@@ -134,7 +135,8 @@ func TestHoneycombOutput(t *testing.T) {
 	})
 	exporter.Builder = libhoney.NewBuilder()
 
-	exporter.Register()
+	sdktrace.Register()
+	exporter.RegisterSimpleSpanProcessor()
 
 	_, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
 	span.SetAttribute(key.New("ex.com/string").String("yes"))
@@ -200,7 +202,8 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	})
 	exporter.Builder = libhoney.NewBuilder()
 
-	exporter.Register()
+	sdktrace.Register()
+	exporter.RegisterSimpleSpanProcessor()
 
 	ctx, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
 	span.AddEvent(ctx, "handling this...", key.New("request-handled").Int(100))
