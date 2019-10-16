@@ -23,10 +23,14 @@ import (
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
+
 	"go.opentelemetry.io/plugin/httptrace"
+	"go.opentelemetry.io/sdk/trace"
 )
 
 func main() {
+	trace.Register()
+
 	apikey := flag.String("apikey", "", "Your Honeycomb API Key")
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
@@ -39,7 +43,7 @@ func main() {
 	})
 
 	defer exporter.Close()
-	exporter.Register()
+	exporter.RegisterSimpleSpanProcessor()
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)

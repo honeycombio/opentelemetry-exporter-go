@@ -8,9 +8,12 @@ import (
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/sdk/trace"
 )
 
 func main() {
+	trace.Register()
+
 	apikey := flag.String("apikey", "", "Your Honeycomb API Key")
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
@@ -23,7 +26,7 @@ func main() {
 	})
 
 	defer exporter.Close()
-	exporter.Register()
+	exporter.RegisterSimpleSpanExporter()
 
 	ctx := context.Background()
 	ctx, span := apitrace.GlobalTracer().Start(ctx, "/foo")
