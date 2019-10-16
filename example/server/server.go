@@ -20,8 +20,8 @@ import (
 	"net/http"
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
+	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 
 	"go.opentelemetry.io/plugin/httptrace"
@@ -48,7 +48,7 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
 
-		req = req.WithContext(tag.WithMap(req.Context(), tag.NewMap(tag.MapUpdate{
+		req = req.WithContext(distributedcontext.WithMap(req.Context(), distributedcontext.NewMap(distributedcontext.MapUpdate{
 			MultiKV: tags,
 		})))
 

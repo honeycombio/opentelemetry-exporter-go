@@ -14,10 +14,9 @@ require (
 	github.com/honeycombio/libhoney-go v1.12.0
 	github.com/klauspost/compress v1.8.3 // indirect
 	github.com/klauspost/cpuid v1.2.1 // indirect
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.4.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	go.opentelemetry.io v0.0.0-20191008185658-c2d5c6699002
-	google.golang.org/grpc v1.23.0
+	go.opentelemetry.io v0.0.0-20191015201256-7e5fc4e6aaa9
+	google.golang.org/grpc v1.24.0
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )

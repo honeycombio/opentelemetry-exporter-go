@@ -11,8 +11,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 
+	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/api/tag"
 	apitrace "go.opentelemetry.io/api/trace"
 	"go.opentelemetry.io/plugin/httptrace"
 
@@ -38,8 +38,8 @@ func main() {
 	exporter.RegisterSimpleSpanProcessor()
 
 	client := http.DefaultClient
-	ctx := tag.NewContext(context.Background(),
-		tag.Insert(key.New("username").String("donuts")),
+	ctx := distributedcontext.NewContext(context.Background(),
+		distributedcontext.Insert(key.New("username").String("donuts")),
 	)
 
 	var body []byte

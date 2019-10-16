@@ -26,7 +26,7 @@ func main() {
 	})
 
 	defer exporter.Close()
-	exporter.RegisterSimpleSpanExporter()
+	exporter.RegisterSimpleSpanProcessor()
 
 	ctx := context.Background()
 	ctx, span := apitrace.GlobalTracer().Start(ctx, "/foo")
