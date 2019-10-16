@@ -34,7 +34,9 @@ func main() {
 		Debug:       true,
 		ServiceName: "opentelemetry-client",
 	})
-	log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	defer exporter.Close()
 	exporter.RegisterSimpleSpanProcessor()

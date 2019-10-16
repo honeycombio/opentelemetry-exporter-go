@@ -205,7 +205,9 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 			SpanEventType: "span_event",
 		})
 		err := spanEv.SendPresampled()
-		e.OnError(err)
+		if err != nil {
+			e.OnError(err)
+		}
 	}
 	for _, kv := range data.Attributes {
 		ev.AddField(getValueFromCoreAttribute(kv))
@@ -218,7 +220,9 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 	}
 
 	err := ev.SendPresampled()
-	e.OnError(err)
+	if err != nil {
+		e.OnError(err)
+	}
 }
 
 var _ export.SpanSyncer = (*Exporter)(nil)
