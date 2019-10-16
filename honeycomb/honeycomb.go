@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"go.opentelemetry.io/api/core"
 	"google.golang.org/grpc/codes"
+	"sync"
 	"time"
 
 	libhoney "github.com/honeycombio/libhoney-go"
@@ -55,6 +56,7 @@ type Config struct {
 
 // Exporter is an implementation of trace.Exporter that uploads a span to Honeycomb
 type Exporter struct {
+	once           sync.Once
 	Builder        *libhoney.Builder
 	SampleFraction float64
 	// Service Name identifies your application. While optional, setting this
@@ -142,11 +144,12 @@ func NewExporter(config Config) *Exporter {
 	}
 }
 
-func (e *Exporter) Register() {
-	trace.Register()
+func (e *Exporter) RegisterSimpleSpanProcessor() {
 	// Wrap the exporter with SimpleSpanProcessor and register the processor.
-	ssp := trace.NewSimpleSpanProcessor(e)
-	trace.RegisterSpanProcessor(ssp)
+	e.once.Do(func() {
+		ssp := trace.NewSimpleSpanProcessor(e)
+		trace.RegisterSpanProcessor(ssp)
+	})
 }
 
 // ExportSpan exports a SpanData to Honeycomb.
