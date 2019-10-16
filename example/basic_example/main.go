@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 	apitrace "go.opentelemetry.io/api/trace"
@@ -18,12 +19,15 @@ func main() {
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
 
-	exporter := honeycomb.NewExporter(honeycomb.Config{
+	exporter, err := honeycomb.NewExporter(honeycomb.Config{
 		ApiKey:      *apikey,
 		Dataset:     *dataset,
 		Debug:       true,
 		ServiceName: "opentelemetry-basic-example",
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	defer exporter.Close()
 	exporter.RegisterSimpleSpanProcessor()

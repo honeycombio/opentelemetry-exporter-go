@@ -17,6 +17,7 @@ package main
 import (
 	"flag"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
@@ -35,12 +36,15 @@ func main() {
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
 
-	exporter := honeycomb.NewExporter(honeycomb.Config{
+	exporter, err := honeycomb.NewExporter(honeycomb.Config{
 		ApiKey:      *apikey,
 		Dataset:     *dataset,
 		Debug:       true,
 		ServiceName: "opentelemetry-server",
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	defer exporter.Close()
 	exporter.RegisterSimpleSpanProcessor()
@@ -67,8 +71,8 @@ func main() {
 	}
 
 	http.HandleFunc("/hello", helloHandler)
-	err := http.ListenAndServe(":7777", nil)
+	err = http.ListenAndServe(":7777", nil)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
