@@ -193,7 +193,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 		}
 
 		for _, kv := range a.Attributes {
-			spanEv.AddField(kv.Key.Name, kv.Value.Emit())
+			spanEv.AddField(string(kv.Key), kv.Value.Emit())
 		}
 		spanEv.Timestamp = a.Time
 
@@ -278,5 +278,5 @@ func getValueFromCoreAttribute(kv core.KeyValue) (string, interface{}) {
 	case core.BYTES:
 		tagValue = kv.Value.Bytes
 	}
-	return kv.Key.Name, tagValue
+	return string(kv.Key), tagValue
 }
