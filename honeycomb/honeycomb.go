@@ -80,10 +80,28 @@ type Exporter struct {
 
 // SpanEvent represents an event attached to a specific span.
 type SpanEvent struct {
-	Name          string `json:"name"`
-	TraceID       string `json:"trace.trace_id"`
-	ParentID      string `json:"trace.parent_id,omitempty"`
-	SpanEventType string `json:"meta.span_type"`
+	Name     string `json:"name"`
+	TraceID  string `json:"trace.trace_id"`
+	ParentID string `json:"trace.parent_id,omitempty"`
+	SpanType string `json:"meta.span_type"`
+}
+
+type SpanRefType int64
+
+const (
+	SpanRefType_CHILD_OF     SpanRefType = 0
+	SpanRefType_FOLLOWS_FROM SpanRefType = 1
+)
+
+// Link represents a link to a span that lives elsewhere.
+// TraceID and ParentID are used to identify the span with which the trace is associated
+type Link struct {
+	TraceID     string      `json:"trace.trace_id"`
+	ParentID    string      `json:"trace.parent_id,omitempty"`
+	LinkTraceID string      `json:"trace.link.trace_id"`
+	LinkSpanID  string      `json:"trace.link.span_id"`
+	SpanType    string      `json:"meta.span_type"`
+	RefType     SpanRefType `json:"ref_type,omitempty"`
 }
 
 // Span is the format of trace events that Honeycomb accepts
@@ -195,16 +213,37 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 		spanEv.Timestamp = a.Time
 
 		spanEv.Add(SpanEvent{
-			Name:          a.Message,
-			TraceID:       getHoneycombTraceID(data.SpanContext.TraceIDString()),
-			ParentID:      fmt.Sprintf("%d", data.SpanContext.SpanID),
-			SpanEventType: "span_event",
+			Name:     a.Message,
+			TraceID:  getHoneycombTraceID(data.SpanContext.TraceIDString()),
+			ParentID: fmt.Sprintf("%d", data.SpanContext.SpanID),
+			SpanType: "span_event",
 		})
-		err := spanEv.SendPresampled()
+		err := spanEv.Send()
 		if err != nil {
 			e.OnError(err)
 		}
 	}
+
+	for _, link := range data.Links {
+		linkEv := e.Builder.NewEvent()
+		linkEv.Add(Link{
+			TraceID:     getHoneycombTraceID(data.SpanContext.TraceID.High, data.SpanContext.TraceID.Low),
+			ParentID:    fmt.Sprintf("%d", data.SpanContext.SpanID),
+			LinkTraceID: getHoneycombTraceID(link.TraceID.High, link.TraceID.Low),
+			LinkSpanID:  fmt.Sprintf("%d", link.SpanID),
+			SpanType:    "link",
+			// TODO(akvanhar): properly set the reference type when specs are defined
+			// see https://github.com/open-telemetry/opentelemetry-specification/issues/65
+			RefType: SpanRefType_CHILD_OF,
+
+			// TODO(akvanhar) add support for link.Attributes
+		})
+		err := linkEv.Send()
+		if err != nil {
+			e.OnError(err)
+		}
+	}
+
 	for _, kv := range data.Attributes {
 		ev.AddField(getValueFromCoreAttribute(kv))
 	}

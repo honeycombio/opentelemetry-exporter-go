@@ -23,6 +23,7 @@ func TestExport(t *testing.T) {
 	now := time.Now().Round(time.Microsecond)
 	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID := uint64(0x0102030405060708)
+
 	expectedTraceID := "01020304-0506-0708-090a-0b0c0d0e0f10"
 	expectedSpanID := "72623859790382856"
 
@@ -251,4 +252,58 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 
 	spanEvent := mainEventFields["meta.span_type"]
 	assert.Equal("span_event", spanEvent)
+}
+func TestHoneycombOutputWithLinks(t *testing.T) {
+	linkTraceID := core.TraceID{High: 0x0102030405060709, Low: 0x090a0b0c0d0e0f11}
+	linkSpanID := uint64(0x0102030405060709)
+
+	mockHoneycomb := &libhoney.MockOutput{}
+	assert := assert.New(t)
+
+	exporter, err := NewExporter(Config{
+		ApiKey:      "overridden",
+		Dataset:     "overridden",
+		ServiceName: "opentelemetry-test",
+	})
+	assert.Equal(err, nil)
+
+	libhoney.Init(libhoney.Config{
+		WriteKey: "test",
+		Dataset:  "test",
+		Output:   mockHoneycomb,
+	})
+	exporter.Builder = libhoney.NewBuilder()
+
+	sdktrace.Register()
+	exporter.RegisterSimpleSpanProcessor()
+
+	_, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
+	span.AddLink(apitrace.Link{
+		SpanContext: core.SpanContext{
+			TraceID: linkTraceID,
+			SpanID:  linkSpanID,
+		},
+	})
+
+	span.End()
+
+	assert.Equal(2, len(mockHoneycomb.Events()))
+
+	// Check the fields on the main span event
+	linkFields := mockHoneycomb.Events()[0].Fields()
+	mainEventFields := mockHoneycomb.Events()[1].Fields()
+	traceID := linkFields["trace.trace_id"]
+	honeycombTranslatedTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", span.SpanContext().TraceID.High, span.SpanContext().TraceID.Low))
+	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
+
+	assert.Equal(honeycombTranslatedTraceID, traceID)
+
+	linkParentID := linkFields["trace.parent_id"]
+	assert.Equal(mainEventFields["trace.span_id"], linkParentID)
+	hclinkTraceID := linkFields["trace.link.trace_id"]
+	assert.Equal(getHoneycombTraceID(linkTraceID.High, linkTraceID.Low), hclinkTraceID)
+	hclinkSpanID := linkFields["trace.link.span_id"]
+	assert.Equal(fmt.Sprintf("%d", linkSpanID), hclinkSpanID)
+	linkSpanType := linkFields["meta.span_type"]
+	assert.Equal("link", linkSpanType)
 }
