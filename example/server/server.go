@@ -23,15 +23,25 @@ import (
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
-	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/api/trace"
 
 	"go.opentelemetry.io/plugin/httptrace"
-	"go.opentelemetry.io/sdk/trace"
+	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
-func main() {
-	trace.Register()
+func initTracer(exporter *honeycomb.Exporter) {
+	exporter.RegisterSimpleSpanProcessor()
+	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
+	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
+	if err != nil {
+		log.Fatal(err)
+	}
+	trace.SetGlobalProvider(tp)
+}
 
+func main() {
 	apikey := flag.String("apikey", "", "Your Honeycomb API Key")
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
@@ -45,9 +55,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer exporter.Close()
-	exporter.RegisterSimpleSpanProcessor()
+	
+	initTracer(exporter)
+
+	tr := trace.GlobalProvider().GetTracer("honeycomb/example/server")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
@@ -56,11 +68,11 @@ func main() {
 			MultiKV: tags,
 		})))
 
-		ctx, span := apitrace.GlobalTracer().Start(
+		ctx, span := tr.Start(
 			req.Context(),
 			"hello",
-			apitrace.WithAttributes(attrs...),
-			apitrace.ChildOf(spanCtx),
+			trace.WithAttributes(attrs...),
+			trace.ChildOf(spanCtx),
 		)
 		defer span.End()
 

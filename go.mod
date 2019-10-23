@@ -16,7 +16,7 @@ require (
 	github.com/klauspost/cpuid v1.2.1 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	go.opentelemetry.io v0.0.0-20191021171549-9b5f5dd13acd
+	go.opentelemetry.io v0.0.0-20191023062924-b3247f04fc47
 	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582 // indirect
 	google.golang.org/appengine v1.6.5 // indirect
 	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03 // indirect

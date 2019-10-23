@@ -21,7 +21,7 @@ import (
 
 func TestExport(t *testing.T) {
 	now := time.Now().Round(time.Microsecond)
-	traceID := core.TraceID{High: 0x0102030405060708, Low: 0x090a0b0c0d0e0f10}
+	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID := uint64(0x0102030405060708)
 	expectedTraceID := "01020304-0506-0708-090a-0b0c0d0e0f10"
 	expectedSpanID := "72623859790382856"
@@ -118,16 +118,12 @@ func TestExport(t *testing.T) {
 	}
 }
 
-func TestHoneycombOutput(t *testing.T) {
-	mockHoneycomb := &libhoney.MockOutput{}
-	assert := assert.New(t)
-
+func setUpTestExporter(mockHoneycomb *libhoney.MockOutput) (apitrace.Tracer, error) {
 	exporter, err := NewExporter(Config{
 		ApiKey:      "overridden",
 		Dataset:     "overridden",
 		ServiceName: "opentelemetry-test",
 	})
-	assert.Equal(err, nil)
 
 	libhoney.Init(libhoney.Config{
 		WriteKey: "test",
@@ -136,10 +132,22 @@ func TestHoneycombOutput(t *testing.T) {
 	})
 	exporter.Builder = libhoney.NewBuilder()
 
-	sdktrace.Register()
 	exporter.RegisterSimpleSpanProcessor()
+	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
+	apitrace.SetGlobalProvider(tp)
 
-	_, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
+	tr := apitrace.GlobalProvider().GetTracer("honeycomb/test")
+	return tr, err
+}
+
+func TestHoneycombOutput(t *testing.T) {
+	mockHoneycomb := &libhoney.MockOutput{}
+	assert := assert.New(t)
+	tr, err := setUpTestExporter(mockHoneycomb)
+	assert.Equal(err, nil)
+
+	_, span := tr.Start(context.TODO(), "myTestSpan")
 	span.SetAttribute(key.New("ex.com/string").String("yes"))
 	span.SetAttribute(key.New("ex.com/bool").Bool(true))
 	span.SetAttribute(key.New("ex.com/int64").Int64(42))
@@ -153,7 +161,7 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Equal(1, len(mockHoneycomb.Events()))
 	mainEventFields := mockHoneycomb.Events()[0].Fields()
 	traceID := mainEventFields["trace.trace_id"]
-	honeycombTranslatedTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", span.SpanContext().TraceID.High, span.SpanContext().TraceID.Low))
+	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceIDString())
 	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)
@@ -163,7 +171,7 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Equal(expectedSpanID, spanID)
 
 	name := mainEventFields["name"]
-	assert.Equal("myTestSpan", name)
+	assert.Equal("honeycomb/test/myTestSpan", name)
 
 	durationMilli := mainEventFields["duration_ms"]
 	durationMilliFl, ok := durationMilli.(float64)
@@ -189,25 +197,10 @@ func TestHoneycombOutput(t *testing.T) {
 func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	mockHoneycomb := &libhoney.MockOutput{}
 	assert := assert.New(t)
-
-	exporter, err := NewExporter(Config{
-		ApiKey:      "overridden",
-		Dataset:     "overridden",
-		ServiceName: "opentelemetry-test",
-	})
+	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Equal(err, nil)
 
-	libhoney.Init(libhoney.Config{
-		WriteKey: "test",
-		Dataset:  "test",
-		Output:   mockHoneycomb,
-	})
-	exporter.Builder = libhoney.NewBuilder()
-
-	sdktrace.Register()
-	exporter.RegisterSimpleSpanProcessor()
-
-	ctx, span := apitrace.GlobalTracer().Start(context.TODO(), "myTestSpan")
+	ctx, span := tr.Start(context.TODO(), "myTestSpan")
 	span.AddEvent(ctx, "handling this...", key.New("request-handled").Int(100))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
@@ -218,7 +211,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	// Check the fields on the main span event
 	messageEventFields := mockHoneycomb.Events()[1].Fields()
 	traceID := messageEventFields["trace.trace_id"]
-	honeycombTranslatedTraceUUID, _ := uuid.Parse(fmt.Sprintf("%016x%016x", span.SpanContext().TraceID.High, span.SpanContext().TraceID.Low))
+	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceIDString())
 	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)
@@ -228,7 +221,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal(expectedSpanID, spanID)
 
 	name := messageEventFields["name"]
-	assert.Equal("myTestSpan", name)
+	assert.Equal("honeycomb/test/myTestSpan", name)
 
 	durationMilli := messageEventFields["duration_ms"]
 	durationMilliFl, ok := durationMilli.(float64)
