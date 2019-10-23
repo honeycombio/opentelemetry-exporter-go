@@ -99,8 +99,8 @@ type Span struct {
 	HasRemoteParent bool    `json:"has_remote_parent"`
 }
 
-func getHoneycombTraceID(traceIDHigh uint64, traceIDLow uint64) string {
-	hcTraceUUID, err := uuid.Parse(fmt.Sprintf("%016x%016x", traceIDHigh, traceIDLow))
+func getHoneycombTraceID(traceID string) string {
+	hcTraceUUID, err := uuid.Parse(traceID)
 	if err != nil {
 		return ""
 	}
@@ -147,8 +147,6 @@ func NewExporter(config Config) (*Exporter, error) {
 		return nil, err
 	}
 	builder := libhoney.NewBuilder()
-
-	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
 
 	onError := func(err error) {
 		if config.OnError != nil {
@@ -199,7 +197,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 
 		spanEv.Add(SpanEvent{
 			Name:          a.Message,
-			TraceID:       getHoneycombTraceID(data.SpanContext.TraceID.High, data.SpanContext.TraceID.Low),
+			TraceID:       getHoneycombTraceID(data.SpanContext.TraceIDString()),
 			ParentID:      fmt.Sprintf("%d", data.SpanContext.SpanID),
 			DurationMilli: 0,
 			SpanEventType: "span_event",
@@ -231,7 +229,7 @@ func honeycombSpan(s *export.SpanData) *Span {
 	sc := s.SpanContext
 
 	hcSpan := &Span{
-		TraceID:         getHoneycombTraceID(sc.TraceID.High, sc.TraceID.Low),
+		TraceID:         getHoneycombTraceID(sc.TraceIDString()),
 		ID:              fmt.Sprintf("%d", sc.SpanID),
 		Name:            s.Name,
 		HasRemoteParent: s.HasRemoteParent,
