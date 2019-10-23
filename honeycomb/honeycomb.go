@@ -227,9 +227,9 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 	for _, link := range data.Links {
 		linkEv := e.Builder.NewEvent()
 		linkEv.Add(Link{
-			TraceID:     getHoneycombTraceID(data.SpanContext.TraceID.High, data.SpanContext.TraceID.Low),
+			TraceID:     getHoneycombTraceID(data.SpanContext.TraceIDString()),
 			ParentID:    fmt.Sprintf("%d", data.SpanContext.SpanID),
-			LinkTraceID: getHoneycombTraceID(link.TraceID.High, link.TraceID.Low),
+			LinkTraceID: getHoneycombTraceID(link.TraceIDString()),
 			LinkSpanID:  fmt.Sprintf("%d", link.SpanID),
 			SpanType:    "link",
 			// TODO(akvanhar): properly set the reference type when specs are defined
