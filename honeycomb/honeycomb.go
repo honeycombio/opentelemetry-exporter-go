@@ -80,11 +80,10 @@ type Exporter struct {
 
 // SpanEvent represents an event attached to a specific span.
 type SpanEvent struct {
-	Name          string  `json:"name"`
-	TraceID       string  `json:"trace.trace_id"`
-	ParentID      string  `json:"trace.parent_id,omitempty"`
-	DurationMilli float64 `json:"duration_ms"`
-	SpanEventType string  `json:"meta.span_type"`
+	Name          string `json:"name"`
+	TraceID       string `json:"trace.trace_id"`
+	ParentID      string `json:"trace.parent_id,omitempty"`
+	SpanEventType string `json:"meta.span_type"`
 }
 
 // Span is the format of trace events that Honeycomb accepts
@@ -199,7 +198,6 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 			Name:          a.Message,
 			TraceID:       getHoneycombTraceID(data.SpanContext.TraceIDString()),
 			ParentID:      fmt.Sprintf("%d", data.SpanContext.SpanID),
-			DurationMilli: 0,
 			SpanEventType: "span_event",
 		})
 		err := spanEv.SendPresampled()
