@@ -93,8 +93,9 @@ const (
 	SpanRefType_FOLLOWS_FROM SpanRefType = 1
 )
 
-// Link represents a link to a span that lives elsewhere.
+// Link represents a link to a trace and span that lives elsewhere.
 // TraceID and ParentID are used to identify the span with which the trace is associated
+// We are modeling Links for now as child spans rather than properties of the event.
 type Link struct {
 	TraceID     string      `json:"trace.trace_id"`
 	ParentID    string      `json:"trace.parent_id,omitempty"`
