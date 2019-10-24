@@ -8,8 +8,4 @@ In `example/server` run `go install && servier -apikey=<your-api-key> -dataset=o
 
 In `example/client` run `go install && client -apikey=<your-api-key> -dataset=opentelemetry`
 
-## To run the basic example:
-
-In `example/basic_example` run `go install && go run main -apikey=<your-api-key> -dataset=opentelemetry`
-
 [Sign up for free](https://ui.honeycomb.io/signup) if you haven’t already!

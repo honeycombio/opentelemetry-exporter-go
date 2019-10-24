@@ -13,16 +13,17 @@ exporter := honeycomb.NewExporter(honeycomb.Config{
     ApiKey:  <YOUR-API-KEY>,
     Dataset: <YOUR-DATASET>,
     Debug:   true, // optional to output to stdout
+    ServiceName: "example-server",
 })
-exporter.ServiceName = "example-server"
+
 defer exporter.Close()
-exporter.Register()
+exporter.RegisterSimpleSpanProcessor()
 ```
 
 ## Sampling
 
-The default exporter uses the OpenTelemetry Default Sampler `DefaultSampler: trace.AlwaysSample()` under the hood.
-
-You can configure sampling with Honeycomb with either Deterministic Sampling or Dynamic Sampling.
-
 Read more about [sampling with Honeycomb in our docs](https://docs.honeycomb.io/working-with-your-data/tracing/sampling/).
+
+## Example
+
+You can find an example Honeycomb app in [/example](./example)
