@@ -56,13 +56,14 @@ func main() {
 		log.Fatal(err)
 	}
 	defer exporter.Close()
-	
+
 	initTracer(exporter)
 
 	tr := trace.GlobalProvider().GetTracer("honeycomb/example/server")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
+		link := trace.Link{SpanContext: spanCtx, Attributes: attrs}
 
 		req = req.WithContext(distributedcontext.WithMap(req.Context(), distributedcontext.NewMap(distributedcontext.MapUpdate{
 			MultiKV: tags,
@@ -78,6 +79,7 @@ func main() {
 
 		span.SetAttribute(key.New("ex.com/another").String("yes"))
 		span.AddEvent(ctx, "handling this...", key.New("request-handled").Int(100))
+		span.AddLink(link)
 
 		_, _ = io.WriteString(w, "Hello, world!\n")
 	}
