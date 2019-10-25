@@ -9,14 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
-	libhoney "github.com/honeycombio/libhoney-go"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/api/core"
 	"go.opentelemetry.io/api/key"
-	apitrace "go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 	"go.opentelemetry.io/sdk/export"
+	"google.golang.org/grpc/codes"
+
+	libhoney "github.com/honeycombio/libhoney-go"
+	apitrace "go.opentelemetry.io/api/trace"
 	sdktrace "go.opentelemetry.io/sdk/trace"
 )
 
@@ -137,9 +138,9 @@ func setUpTestExporter(mockHoneycomb *libhoney.MockOutput) (apitrace.Tracer, err
 	exporter.RegisterSimpleSpanProcessor()
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter))
-	apitrace.SetGlobalProvider(tp)
+	global.SetTraceProvider(tp)
 
-	tr := apitrace.GlobalProvider().GetTracer("honeycomb/test")
+	tr := global.TraceProvider().GetTracer("honeycomb/test")
 	return tr, err
 }
 

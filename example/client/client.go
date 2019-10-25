@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/api/distributedcontext"
 	"go.opentelemetry.io/api/key"
 	"go.opentelemetry.io/api/trace"
+	"go.opentelemetry.io/global"
 	"go.opentelemetry.io/plugin/httptrace"
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
@@ -30,7 +31,7 @@ func initTracer(exporter *honeycomb.Exporter) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	trace.SetGlobalProvider(tp)
+	global.SetTraceProvider(tp)
 }
 
 func main() {
@@ -51,7 +52,7 @@ func main() {
 
 	initTracer(exporter)
 
-	tr := trace.GlobalProvider().GetTracer("honeycomb/example/client")
+	tr := global.TraceProvider().GetTracer("honeycomb/example/client")
 
 	client := http.DefaultClient
 	ctx := distributedcontext.NewContext(context.Background(),
