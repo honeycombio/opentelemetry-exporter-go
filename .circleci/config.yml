@@ -6,9 +6,11 @@ executors:
       goversion:
         type: string
         default: "11"
-    working_directory: /go/src/github.com/honeycombio/opentelemetry-exporter-go
     docker:
       - image: circleci/golang:1.<< parameters.goversion >>
+        environment:
+          GO111MODULE: "on"
+    working_directory: /go/src/github.com/honeycombio/opentelemetry-exporter-go
 
 jobs:
   test_opentelemetry:
