@@ -3,7 +3,6 @@ package honeycomb
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"github.com/google/uuid"
 	"reflect"
 	"testing"
@@ -24,10 +23,10 @@ import (
 func TestExport(t *testing.T) {
 	now := time.Now().Round(time.Microsecond)
 	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID := uint64(0x0102030405060708)
+	spanID, _ := core.SpanIDFromHex("0102030405060708")
 
 	expectedTraceID := "01020304-0506-0708-090a-0b0c0d0e0f10"
-	expectedSpanID := "72623859790382856"
+	expectedSpanID := "0102030405060708"
 
 	tests := []struct {
 		name string
@@ -170,7 +169,7 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
 	spanID := mainEventFields["trace.span_id"]
-	expectedSpanID := fmt.Sprintf("%d", span.SpanContext().SpanID)
+	expectedSpanID := span.SpanContext().SpanIDString()
 	assert.Equal(expectedSpanID, spanID)
 
 	name := mainEventFields["name"]
@@ -220,7 +219,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
 	spanID := messageEventFields["trace.span_id"]
-	expectedSpanID := fmt.Sprintf("%d", span.SpanContext().SpanID)
+	expectedSpanID := span.SpanContext().SpanIDString()
 	assert.Equal(expectedSpanID, spanID)
 
 	name := messageEventFields["name"]
@@ -257,7 +256,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 }
 func TestHoneycombOutputWithLinks(t *testing.T) {
 	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
-	linkSpanID := uint64(0x0102030405060709)
+	linkSpanID, _ := core.SpanIDFromHex("0102030405060709")
 
 	mockHoneycomb := &libhoney.MockOutput{}
 	assert := assert.New(t)
@@ -292,7 +291,7 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	linkTraceIDString := hex.EncodeToString(linkTraceID[:])
 	assert.Equal(getHoneycombTraceID(linkTraceIDString), hclinkTraceID)
 	hclinkSpanID := linkFields["trace.link.span_id"]
-	assert.Equal(fmt.Sprintf("%d", linkSpanID), hclinkSpanID)
+	assert.Equal("0102030405060709", hclinkSpanID)
 	linkSpanType := linkFields["meta.span_type"]
 	assert.Equal("link", linkSpanType)
 }
