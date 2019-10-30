@@ -18,12 +18,13 @@ package honeycomb
 import (
 	"context"
 	"encoding/hex"
-	"github.com/google/uuid"
-	"go.opentelemetry.io/api/core"
-	"google.golang.org/grpc/codes"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
+	"go.opentelemetry.io/api/core"
+	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
 	"go.opentelemetry.io/sdk/export"
@@ -273,7 +274,8 @@ func honeycombSpan(s *export.SpanData) *Span {
 		HasRemoteParent: s.HasRemoteParent,
 	}
 	parentID := hex.EncodeToString(s.ParentSpanID[:])
-	if s.ParentSpanID != sc.SpanID && parentID != "0000000000000000" {
+	var initializedParentID [8]byte
+	if s.ParentSpanID != sc.SpanID && s.ParentSpanID != initializedParentID {
 		hcSpan.ParentID = parentID
 	}
 
