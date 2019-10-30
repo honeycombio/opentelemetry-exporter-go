@@ -17,7 +17,7 @@ package honeycomb
 
 import (
 	"context"
-	"fmt"
+	"encoding/hex"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/api/core"
 	"google.golang.org/grpc/codes"
@@ -216,7 +216,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 		spanEv.Add(SpanEvent{
 			Name:     a.Message,
 			TraceID:  getHoneycombTraceID(data.SpanContext.TraceIDString()),
-			ParentID: fmt.Sprintf("%d", data.SpanContext.SpanID),
+			ParentID: data.SpanContext.SpanIDString(),
 			SpanType: "span_event",
 		})
 		err := spanEv.Send()
@@ -229,9 +229,9 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 		linkEv := e.Builder.NewEvent()
 		linkEv.Add(Link{
 			TraceID:     getHoneycombTraceID(data.SpanContext.TraceIDString()),
-			ParentID:    fmt.Sprintf("%d", data.SpanContext.SpanID),
+			ParentID:    data.SpanContext.SpanIDString(),
 			LinkTraceID: getHoneycombTraceID(link.TraceIDString()),
-			LinkSpanID:  fmt.Sprintf("%d", link.SpanID),
+			LinkSpanID:  link.SpanIDString(),
 			SpanType:    "link",
 			// TODO(akvanhar): properly set the reference type when specs are defined
 			// see https://github.com/open-telemetry/opentelemetry-specification/issues/65
@@ -268,12 +268,13 @@ func honeycombSpan(s *export.SpanData) *Span {
 
 	hcSpan := &Span{
 		TraceID:         getHoneycombTraceID(sc.TraceIDString()),
-		ID:              fmt.Sprintf("%d", sc.SpanID),
+		ID:              sc.SpanIDString(),
 		Name:            s.Name,
 		HasRemoteParent: s.HasRemoteParent,
 	}
-	if s.ParentSpanID != sc.SpanID && s.ParentSpanID != 0 {
-		hcSpan.ParentID = fmt.Sprintf("%d", s.ParentSpanID)
+	parentID := hex.EncodeToString(s.ParentSpanID[:])
+	if s.ParentSpanID != sc.SpanID && parentID != "0000000000000000" {
+		hcSpan.ParentID = parentID
 	}
 
 	if s, e := s.StartTime, s.EndTime; !s.IsZero() && !e.IsZero() {
@@ -283,18 +284,6 @@ func honeycombSpan(s *export.SpanData) *Span {
 	if s.Status != codes.OK {
 		hcSpan.Error = true
 	}
-
-	// TODO: (akvanhar) add links
-	// TODO: (akvanhar) add SpanRef type
-
-	//var refs []*SpanRef
-	//for _, link := range data.Links {
-	//	refs = append(refs, &gen.SpanRef{
-	//		TraceIdHigh: bytesToInt64(link.TraceID[0:8]),
-	//		TraceIdLow:  bytesToInt64(link.TraceID[8:16]),
-	//		SpanId:      bytesToInt64(link.SpanID[:]),
-	//	})
-	//}
 	return hcSpan
 }
 
