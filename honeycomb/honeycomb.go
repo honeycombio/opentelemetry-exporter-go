@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"go.opentelemetry.io/api/core"
 	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
@@ -140,7 +139,7 @@ func (e *Exporter) Close() {
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
 func NewExporter(config Config) (*Exporter, error) {
 	// Developer note: bump this with each release
-	versionStr := "0.0.8"
+	versionStr := "0.0.9"
 	libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 
 	if config.ApiKey == "" {
@@ -247,7 +246,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 	}
 
 	for _, kv := range data.Attributes {
-		ev.AddField(getValueFromCoreAttribute(kv))
+		ev.AddField(string(kv.Key), kv.Value.AsInterface())
 	}
 
 	ev.AddField("status.code", int32(data.Status))
@@ -287,23 +286,4 @@ func honeycombSpan(s *export.SpanData) *Span {
 		hcSpan.Error = true
 	}
 	return hcSpan
-}
-
-func getValueFromCoreAttribute(kv core.KeyValue) (string, interface{}) {
-	var tagValue interface{}
-	switch kv.Value.Type {
-	case core.BOOL:
-		tagValue = kv.Value.Bool
-	case core.INT64:
-		tagValue = kv.Value.Int64
-	case core.UINT64:
-		tagValue = kv.Value.Uint64
-	case core.FLOAT64:
-		tagValue = kv.Value.Float64
-	case core.STRING:
-		tagValue = kv.Value.String
-	case core.BYTES:
-		tagValue = kv.Value.Bytes
-	}
-	return string(kv.Key), tagValue
 }
