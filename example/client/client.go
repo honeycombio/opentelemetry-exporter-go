@@ -23,7 +23,6 @@ import (
 )
 
 func initTracer(exporter *honeycomb.Exporter) {
-	exporter.RegisterSimpleSpanProcessor()
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
