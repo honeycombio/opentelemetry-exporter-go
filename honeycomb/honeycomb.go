@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/hex"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,7 +26,6 @@ import (
 
 	libhoney "github.com/honeycombio/libhoney-go"
 	"go.opentelemetry.io/sdk/export"
-	"go.opentelemetry.io/sdk/trace"
 )
 
 const (
