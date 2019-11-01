@@ -134,7 +134,6 @@ func setUpTestExporter(mockHoneycomb *libhoney.MockOutput) (apitrace.Tracer, err
 	})
 	exporter.Builder = libhoney.NewBuilder()
 
-	exporter.RegisterSimpleSpanProcessor()
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter))
 	global.SetTraceProvider(tp)
