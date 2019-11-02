@@ -6,10 +6,10 @@
 
 ## Default Exporter
 
-The Exporter can be initialized as a default exporter:
+The Exporter can be initialized using `sdktrace.WithSyncer`:
 
 ```golang
-exporter := honeycomb.NewExporter(honeycomb.Config{
+exporter, _ := honeycomb.NewExporter(honeycomb.Config{
     ApiKey:  <YOUR-API-KEY>,
     Dataset: <YOUR-DATASET>,
     Debug:   true, // optional to output to stdout
@@ -17,7 +17,8 @@ exporter := honeycomb.NewExporter(honeycomb.Config{
 })
 
 defer exporter.Close()
-exporter.RegisterSimpleSpanProcessor()
+sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter))
 ```
 
 ## Sampling
