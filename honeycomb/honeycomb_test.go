@@ -149,12 +149,12 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Equal(err, nil)
 
 	_, span := tr.Start(context.TODO(), "myTestSpan")
-	span.SetAttribute(key.New("ex.com/string").String("yes"))
-	span.SetAttribute(key.New("ex.com/bool").Bool(true))
-	span.SetAttribute(key.New("ex.com/int64").Int64(42))
-	span.SetAttribute(key.New("ex.com/float64").Float64(3.14))
+	span.SetAttribute(key.String("ex.com/string", "yes"))
+	span.SetAttribute(key.Bool("ex.com/bool", true))
+	span.SetAttribute(key.Int64("ex.com/int64", 42))
+	span.SetAttribute(key.Float64("ex.com/float64", 3.14))
 	var nilString string
-	span.SetAttribute(key.New("ex.com/nil").String(nilString))
+	span.SetAttribute(key.String("ex.com/nil", nilString))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()
@@ -202,7 +202,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal(err, nil)
 
 	ctx, span := tr.Start(context.TODO(), "myTestSpan")
-	span.AddEvent(ctx, "handling this...", key.New("request-handled").Int(100))
+	span.AddEvent(ctx, "handling this...", key.Int("request-handled", 100))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()
