@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/sdk/export"
 )
 
 const (
@@ -136,7 +136,7 @@ func (e *Exporter) Close() {
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
 func NewExporter(config Config) (*Exporter, error) {
 	// Developer note: bump this with each release
-	versionStr := "0.0.9"
+	versionStr := "0.0.10"
 	libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 
 	if config.ApiKey == "" {
