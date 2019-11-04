@@ -9,15 +9,15 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/api/core"
-	"go.opentelemetry.io/api/key"
-	"go.opentelemetry.io/global"
-	"go.opentelemetry.io/sdk/export"
+	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/global"
+	"go.opentelemetry.io/otel/sdk/export"
 	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
-	apitrace "go.opentelemetry.io/api/trace"
-	sdktrace "go.opentelemetry.io/sdk/trace"
+	apitrace "go.opentelemetry.io/otel/api/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestExport(t *testing.T) {
