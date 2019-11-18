@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
-	"go.opentelemetry.io/otel/sdk/export"
+	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
 const (
@@ -179,7 +179,7 @@ func NewExporter(config Config) (*Exporter, error) {
 }
 
 // ExportSpan exports a SpanData to Honeycomb.
-func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
+func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	ev := e.Builder.NewEvent()
 
 	if e.ServiceName != "" {
@@ -250,9 +250,9 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *export.SpanData) {
 	}
 }
 
-var _ export.SpanSyncer = (*Exporter)(nil)
+var _ trace.SpanSyncer = (*Exporter)(nil)
 
-func honeycombSpan(s *export.SpanData) *Span {
+func honeycombSpan(s *trace.SpanData) *Span {
 	sc := s.SpanContext
 
 	hcSpan := &Span{

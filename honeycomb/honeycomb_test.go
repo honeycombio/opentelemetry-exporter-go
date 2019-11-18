@@ -12,11 +12,11 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/global"
-	"go.opentelemetry.io/otel/sdk/export"
 	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -30,12 +30,12 @@ func TestExport(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *export.SpanData
+		data *exporttrace.SpanData
 		want *Span
 	}{
 		{
 			name: "no parent",
-			data: &export.SpanData{
+			data: &exporttrace.SpanData{
 				SpanContext: core.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -54,7 +54,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "1 day duration",
-			data: &export.SpanData{
+			data: &exporttrace.SpanData{
 				SpanContext: core.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -73,7 +73,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "status code OK",
-			data: &export.SpanData{
+			data: &exporttrace.SpanData{
 				SpanContext: core.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -93,7 +93,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "status code not OK",
-			data: &export.SpanData{
+			data: &exporttrace.SpanData{
 				SpanContext: core.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
