@@ -10,8 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
-	"go.opentelemetry.io/otel/global"
 	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
@@ -138,7 +138,7 @@ func setUpTestExporter(mockHoneycomb *libhoney.MockOutput) (apitrace.Tracer, err
 		sdktrace.WithSyncer(exporter))
 	global.SetTraceProvider(tp)
 
-	tr := global.TraceProvider().GetTracer("honeycomb/test")
+	tr := global.TraceProvider().Tracer("honeycomb/test")
 	return tr, err
 }
 
@@ -149,12 +149,14 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Equal(err, nil)
 
 	_, span := tr.Start(context.TODO(), "myTestSpan")
-	span.SetAttribute(key.String("ex.com/string", "yes"))
-	span.SetAttribute(key.Bool("ex.com/bool", true))
-	span.SetAttribute(key.Int64("ex.com/int64", 42))
-	span.SetAttribute(key.Float64("ex.com/float64", 3.14))
 	var nilString string
-	span.SetAttribute(key.String("ex.com/nil", nilString))
+	span.SetAttributes(
+		key.String("ex.com/string", "yes"),
+		key.Bool("ex.com/bool", true),
+		key.Int64("ex.com/int64", 42),
+		key.Float64("ex.com/float64", 3.14),
+		key.String("ex.com/nil", nilString),
+	)
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()
@@ -263,13 +265,10 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Equal(err, nil)
 
-	_, span := tr.Start(context.TODO(), "myTestSpan")
-	span.AddLink(apitrace.Link{
-		SpanContext: core.SpanContext{
-			TraceID: linkTraceID,
-			SpanID:  linkSpanID,
-		},
-	})
+	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.LinkedTo(core.SpanContext{
+		TraceID: linkTraceID,
+		SpanID:  linkSpanID,
+	}))
 
 	span.End()
 
