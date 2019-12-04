@@ -15,10 +15,9 @@ require (
 	github.com/klauspost/compress v1.9.0 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	go.opentelemetry.io/otel v0.1.2
+	go.opentelemetry.io/otel v0.2.0
 	golang.org/x/net v0.0.0-20191021144547-ec77196f6094 // indirect
 	google.golang.org/appengine v1.6.5 // indirect
-	google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03 // indirect
 	google.golang.org/grpc v1.24.0
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 )
