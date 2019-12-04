@@ -59,7 +59,7 @@ func main() {
 
 	initTracer(exporter)
 
-	tr := global.TraceProvider().GetTracer("honeycomb/example/server")
+	tr := global.TraceProvider().Tracer("honeycomb/example/server")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)

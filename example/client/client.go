@@ -51,7 +51,7 @@ func main() {
 
 	initTracer(exporter)
 
-	tr := global.TraceProvider().GetTracer("honeycomb/example/client")
+	tr := global.TraceProvider().Tracer("honeycomb/example/client")
 
 	client := http.DefaultClient
 	ctx := distributedcontext.NewContext(context.Background(),
