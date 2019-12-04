@@ -265,13 +265,10 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Equal(err, nil)
 
-	_, span := tr.Start(context.TODO(), "myTestSpan")
-	span.AddLink(apitrace.Link{
-		SpanContext: core.SpanContext{
-			TraceID: linkTraceID,
-			SpanID:  linkSpanID,
-		},
-	})
+	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.LinkedTo(core.SpanContext{
+		TraceID: linkTraceID,
+		SpanID:  linkSpanID,
+	}))
 
 	span.End()
 

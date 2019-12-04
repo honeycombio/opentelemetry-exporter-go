@@ -63,7 +63,6 @@ func main() {
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
-		link := trace.Link{SpanContext: spanCtx, Attributes: attrs}
 
 		req = req.WithContext(distributedcontext.WithMap(req.Context(), distributedcontext.NewMap(distributedcontext.MapUpdate{
 			MultiKV: tags,
@@ -74,12 +73,12 @@ func main() {
 			"hello",
 			trace.WithAttributes(attrs...),
 			trace.ChildOf(spanCtx),
+			trace.LinkedTo(spanCtx, attrs...),
 		)
 		defer span.End()
 
-		span.SetAttribute(key.String("ex.com/another", "yes"))
+		span.SetAttributes(key.String("ex.com/another", "yes"))
 		span.AddEvent(ctx, "handling this...", key.Int("request-handled", 100))
-		span.AddLink(link)
 
 		_, _ = io.WriteString(w, "Hello, world!\n")
 	}
