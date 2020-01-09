@@ -136,7 +136,7 @@ func (e *Exporter) Close() {
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
 func NewExporter(config Config) (*Exporter, error) {
 	// Developer note: bump this with each release
-	versionStr := "0.2.0"
+	versionStr := "0.2.1"
 	libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 
 	if config.ApiKey == "" {
@@ -203,7 +203,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		spanEv.Timestamp = a.Time
 
 		spanEv.Add(SpanEvent{
-			Name:     a.Message,
+			Name:     a.Name,
 			TraceID:  getHoneycombTraceID(data.SpanContext.TraceIDString()),
 			ParentID: data.SpanContext.SpanIDString(),
 			SpanType: "span_event",
