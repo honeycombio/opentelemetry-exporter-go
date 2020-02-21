@@ -59,22 +59,18 @@ type Config struct {
 	OnError func(err error)
 }
 
-// Exporter is an implementation of trace.Exporter that uploads a span to Honeycomb
+// Exporter is an implementation of trace.Exporter that uploads a span to Honeycomb.
 type Exporter struct {
-	Builder        *libhoney.Builder
-	SampleFraction float64
-	// Service Name identifies your application. While optional, setting this
-	// field is extremely valuable when you instrument multiple services. If set
-	// it will be added to all events as `service_name`
-	ServiceName string
-	// Debug will emit verbose logging to STDOUT when true.
-	// If you're having trouble getting the exporter to work, set this to true in a dev
-	// environment
-	Debug bool
-	// OnError is the hook to be called when there is
-	// an error occurred when uploading the span data.
-	// If no custom hook is set, errors are logged.
-	OnError func(err error)
+	builder *libhoney.Builder
+	// serviceName identifies your application. If set it will be added to all
+	// events as `service_name`.
+	//
+	// While optional, setting this field is extremely valuable when you
+	// instrument multiple services.
+	serviceName string
+	// onError is the hook to be called when there is an error occurred when
+	// uploading the span data. If no custom hook is set, errors are logged.
+	onError func(err error)
 }
 
 // SpanEvent represents an event attached to a specific span.
@@ -179,18 +175,18 @@ func NewExporter(config Config) (*Exporter, error) {
 	}
 
 	return &Exporter{
-		Builder:     builder,
-		ServiceName: config.ServiceName,
-		OnError:     onError,
+		builder:     builder,
+		serviceName: config.ServiceName,
+		onError:     onError,
 	}, nil
 }
 
 // ExportSpan exports a SpanData to Honeycomb.
 func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
-	ev := e.Builder.NewEvent()
+	ev := e.builder.NewEvent()
 
-	if e.ServiceName != "" {
-		ev.AddField("service_name", e.ServiceName)
+	if e.serviceName != "" {
+		ev.AddField("service_name", e.serviceName)
 	}
 
 	ev.Timestamp = data.StartTime
@@ -199,9 +195,9 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 
 	// We send these message events as 0 duration spans
 	for _, a := range data.MessageEvents {
-		spanEv := e.Builder.NewEvent()
-		if e.ServiceName != "" {
-			spanEv.AddField("service_name", e.ServiceName)
+		spanEv := e.builder.NewEvent()
+		if e.serviceName != "" {
+			spanEv.AddField("service_name", e.serviceName)
 		}
 
 		for _, kv := range a.Attributes {
@@ -217,12 +213,12 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		})
 		err := spanEv.Send()
 		if err != nil {
-			e.OnError(err)
+			e.onError(err)
 		}
 	}
 
 	for _, link := range data.Links {
-		linkEv := e.Builder.NewEvent()
+		linkEv := e.builder.NewEvent()
 		linkEv.Add(Link{
 			TraceID:     getHoneycombTraceID(data.SpanContext.TraceIDString()),
 			ParentID:    data.SpanContext.SpanIDString(),
@@ -237,7 +233,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		})
 		err := linkEv.Send()
 		if err != nil {
-			e.OnError(err)
+			e.onError(err)
 		}
 	}
 
@@ -253,7 +249,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 
 	err := ev.SendPresampled()
 	if err != nil {
-		e.OnError(err)
+		e.onError(err)
 	}
 }
 

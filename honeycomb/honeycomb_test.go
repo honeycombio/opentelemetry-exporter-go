@@ -3,10 +3,11 @@ package honeycomb
 import (
 	"context"
 	"encoding/hex"
-	"github.com/google/uuid"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/api/core"
@@ -126,13 +127,16 @@ func setUpTestExporter(mockHoneycomb *libhoney.MockOutput) (apitrace.Tracer, err
 		Dataset:     "overridden",
 		ServiceName: "opentelemetry-test",
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	libhoney.Init(libhoney.Config{
 		WriteKey: "test",
 		Dataset:  "test",
 		Output:   mockHoneycomb,
 	})
-	exporter.Builder = libhoney.NewBuilder()
+	exporter.builder = libhoney.NewBuilder()
 
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter))
