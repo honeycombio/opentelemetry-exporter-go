@@ -37,37 +37,18 @@ const (
 
 // Config defines the basic configuration for the Honeycomb exporter.
 type Config struct {
-	// APIKey is your Honeycomb authentication token, available from
-	// https://ui.honeycomb.io/account. default: apikey-placeholder
-	//
-	// Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
-	APIKey string
-	// Dataset is the name of the Honeycomb dataset to which events will be
-	// sent. default: beeline-go
-	Dataset string
-	// Service Name identifies your application. While optional, setting this
-	// field is extremely valuable when you instrument multiple services. If set
-	// it will be added to all events as `service_name`
-	ServiceName string
-	// Debug will emit verbose logging to STDOUT when true. If you're having
-	// trouble getting the beeline to work, set this to true in a dev
-	// environment.
-	Debug bool
-	// APIHost is the hostname for the Honeycomb API server to which to send
-	// these events. default: https://api.honeycomb.io/
-	APIHost string
-	// UserAgent will set the user agent used by the exporter
-	UserAgent string
-	// OnError is the hook to be called when there is
-	// an error occurred when uploading the span data.
-	// If no custom hook is set, errors are logged.
-	OnError func(err error)
 }
 
 type exporterConfig struct {
+	apiKey        string
+	dataset       string
+	serviceName   string
 	staticFields  map[string]interface{}
 	dynamicFields map[string]func() interface{}
+	apiURL        string
 	output        libhoney.Output
+	onError       func(error)
+	debug         bool
 }
 
 const (
@@ -84,6 +65,51 @@ func validateField(name string) error {
 		return errors.New("field name must not be empty")
 	}
 	return nil
+}
+
+// UsingAPIKey specifies your Honeycomb authentication token, available from
+// https://ui.honeycomb.io/account. This API key must have permission to send
+// events.
+//
+// If not specified, the default API key is "apikey-placeholder."
+//
+// Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup.
+func UsingAPIKey(key string) ExporterOption {
+	return func(c *exporterConfig) error {
+		if len(key) == 0 {
+			return errors.New("API key must not be empty")
+		}
+		c.apiKey = key
+		return nil
+	}
+}
+
+// TargetingDataset specifies the name of the Honeycomb dataset to which the
+// exporter will send events.
+//
+// If not specified, the default dataset name is "opentelemetry."
+func TargetingDataset(name string) ExporterOption {
+	return func(c *exporterConfig) error {
+		if len(name) == 0 {
+			return errors.New("dataset name must not be empty")
+		}
+		c.dataset = name
+		return nil
+	}
+}
+
+// WithServiceName specifies an identifier for your application for use in
+// events sent by the exporter. While optional, specifying this name is
+// extremely valuable when you instrument multiple services.
+//
+// If set it will be added to all events as the field "service_name."
+func WithServiceName(name string) ExporterOption {
+	return func(c *exporterConfig) error {
+		if len(name) > 0 {
+			c.serviceName = name
+		}
+		return nil
+	}
 }
 
 // WithField adds a field with the given name and value to the exporter. Any
@@ -201,6 +227,47 @@ func WithDynamicFields(m map[string]func() interface{}) ExporterOption {
 	}
 }
 
+// WithAPIURL specifies the URL for the Honeycomb API server to which to send
+// events.
+//
+// If not specified, the default URL is https://api.honeycomb.io/.
+func WithAPIURL(url string) ExporterOption {
+	return func(c *exporterConfig) error {
+		// NB: libhoney.VerifyAPIKey parses this URL to make sure it's valid.
+		if len(url) == 0 {
+			return errors.New("API URL name must not be empty")
+		}
+		c.apiURL = url
+		return nil
+	}
+}
+
+// CallingOnError specifies a hook function to be called when an error occurs
+// sending events to Honeycomb.
+//
+// If not specified, the default hook logs the errors. Specifying a nil value
+// suppresses this default logging behavior.
+func CallingOnError(f func(error)) ExporterOption {
+	return func(c *exporterConfig) error {
+		if f == nil {
+			f = func(error) {}
+		}
+		c.onError = f
+		return nil
+	}
+}
+
+// WithDebugEnabled causes the exporter to emit verbose logging to STDOUT.
+//
+// If you're having trouble getting the exporter to work, try enabling this
+// logging in a development environment to help diagnose the problem.
+func WithDebugEnabled() ExporterOption {
+	return func(c *exporterConfig) error {
+		c.debug = true
+		return nil
+	}
+}
+
 // withHoneycombOutput sets the event output handler on the Honeycomb event
 // transmission subsystem.
 func withHoneycombOutput(o libhoney.Output) ExporterOption {
@@ -298,31 +365,31 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 		libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 	}
 
-	if len(config.APIKey) == 0 {
-		config.APIKey = defaultAPIKey
-	}
-	if len(config.Dataset) == 0 {
-		config.Dataset = defaultDataset
-	}
 	econf := exporterConfig{}
 	for _, o := range opts {
 		if err := o(&econf); err != nil {
 			return nil, err
 		}
 	}
+	if len(econf.apiKey) == 0 {
+		econf.apiKey = defaultAPIKey
+	}
+	if len(econf.dataset) == 0 {
+		econf.dataset = defaultDataset
+	}
 
 	libhoneyConfig := libhoney.Config{
-		WriteKey: config.APIKey,
-		Dataset:  config.Dataset,
+		WriteKey: econf.apiKey,
+		Dataset:  econf.dataset,
 	}
-	if config.Debug {
-		libhoneyConfig.Logger = &libhoney.DefaultLogger{}
-	}
-	if len(config.APIHost) != 0 {
-		libhoneyConfig.APIHost = config.APIHost
+	if len(econf.apiURL) != 0 {
+		libhoneyConfig.APIHost = econf.apiURL
 	}
 	if econf.output != nil {
 		libhoneyConfig.Output = econf.output
+	}
+	if econf.debug {
+		libhoneyConfig.Logger = &libhoney.DefaultLogger{}
 	}
 
 	if err := libhoney.Init(libhoneyConfig); err != nil {
@@ -337,7 +404,7 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 		builder.AddDynamicField(name, f)
 	}
 
-	onError := config.OnError
+	onError := econf.onError
 	if onError == nil {
 		onError = func(err error) {
 			log.Printf("Error when sending spans to Honeycomb: %v", err)
@@ -346,7 +413,7 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 
 	return &Exporter{
 		builder:     builder,
-		serviceName: config.ServiceName,
+		serviceName: econf.serviceName,
 		onError:     onError,
 	}, nil
 }

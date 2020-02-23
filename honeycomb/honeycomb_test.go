@@ -125,12 +125,12 @@ func TestExport(t *testing.T) {
 
 func setUpTestExporter(mockHoneycomb *libhoney.MockOutput, opts ...ExporterOption) (apitrace.Tracer, error) {
 	exporter, err := NewExporter(
-		Config{
-			APIKey:      "overridden",
-			Dataset:     "test",
-			ServiceName: "opentelemetry-test",
-		},
-		append(opts, withHoneycombOutput(mockHoneycomb))...)
+		Config{},
+		append(opts,
+			UsingAPIKey("overridden"),
+			TargetingDataset("test"),
+			WithServiceName("opentelemetry-test"),
+			withHoneycombOutput(mockHoneycomb))...)
 	if err != nil {
 		return nil, err
 	}

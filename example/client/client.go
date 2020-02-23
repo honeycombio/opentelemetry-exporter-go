@@ -38,12 +38,12 @@ func main() {
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
 
-	exporter, err := honeycomb.NewExporter(honeycomb.Config{
-		APIKey:      *apikey,
-		Dataset:     *dataset,
-		Debug:       true,
-		ServiceName: "opentelemetry-client",
-	})
+	exporter, err := honeycomb.NewExporter(
+		honeycomb.Config{},
+		honeycomb.UsingAPIKey(*apikey),
+		honeycomb.TargetingDataset(*dataset),
+		honeycomb.WithServiceName("opentelemetry-client"),
+		honeycomb.WithDebugEnabled())
 	if err != nil {
 		log.Fatal(err)
 	}
