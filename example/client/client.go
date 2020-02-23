@@ -39,8 +39,9 @@ func main() {
 	flag.Parse()
 
 	exporter, err := honeycomb.NewExporter(
-		honeycomb.Config{},
-		honeycomb.UsingAPIKey(*apikey),
+		honeycomb.Config{
+			APIKey: *apikey,
+		},
 		honeycomb.TargetingDataset(*dataset),
 		honeycomb.WithServiceName("opentelemetry-client"),
 		honeycomb.WithDebugEnabled())

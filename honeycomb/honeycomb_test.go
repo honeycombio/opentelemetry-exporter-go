@@ -125,9 +125,10 @@ func TestExport(t *testing.T) {
 
 func setUpTestExporter(mockHoneycomb *libhoney.MockOutput, opts ...ExporterOption) (apitrace.Tracer, error) {
 	exporter, err := NewExporter(
-		Config{},
+		Config{
+			APIKey: "overridden",
+		},
 		append(opts,
-			UsingAPIKey("overridden"),
 			TargetingDataset("test"),
 			WithServiceName("opentelemetry-test"),
 			withHoneycombOutput(mockHoneycomb))...)
@@ -300,6 +301,40 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	assert.Equal("link", linkSpanType)
 }
 
+func TestHoneycombConfigValidation(t *testing.T) {
+	tests := []struct {
+		description string
+		config      Config
+		expectError bool
+	}{
+		{
+			"empty API key",
+			Config{},
+			true,
+		},
+		{
+			"populated API key",
+			Config{
+				APIKey: "xyz",
+			},
+			false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			assert := assert.New(t)
+			exporter, err := NewExporter(test.config)
+			if test.expectError {
+				assert.Error(err)
+				assert.Nil(exporter)
+			} else {
+				assert.Nil(err)
+				assert.NotNil(exporter)
+			}
+		})
+	}
+}
+
 func TestHoneycombStaticFieldValidation(t *testing.T) {
 	tests := []struct {
 		description string
@@ -317,7 +352,9 @@ func TestHoneycombStaticFieldValidation(t *testing.T) {
 			false,
 		},
 	}
-	var config Config
+	config := Config{
+		APIKey: "overridden",
+	}
 	var fieldValue interface{} = 1
 	for _, test := range tests {
 		for _, inMap := range []bool{false, true} {
@@ -377,7 +414,9 @@ func TestHoneycombDynamicFieldValidation(t *testing.T) {
 			false,
 		},
 	}
-	var config Config
+	config := Config{
+		APIKey: "overridden",
+	}
 	for _, test := range tests {
 		for _, inMap := range []bool{false, true} {
 			description := test.description

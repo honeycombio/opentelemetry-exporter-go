@@ -31,16 +31,20 @@ import (
 )
 
 const (
-	defaultAPIKey  = "apikey-placeholder"
 	defaultDataset = "opentelemetry"
 )
 
 // Config defines the basic configuration for the Honeycomb exporter.
 type Config struct {
+	// APIKey is your Honeycomb authentication token, available from
+	// https://ui.honeycomb.io/account. This API key must have permission to
+	// send events.
+	//
+	// Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup.
+	APIKey string
 }
 
 type exporterConfig struct {
-	apiKey        string
 	dataset       string
 	serviceName   string
 	staticFields  map[string]interface{}
@@ -65,23 +69,6 @@ func validateField(name string) error {
 		return errors.New("field name must not be empty")
 	}
 	return nil
-}
-
-// UsingAPIKey specifies your Honeycomb authentication token, available from
-// https://ui.honeycomb.io/account. This API key must have permission to send
-// events.
-//
-// If not specified, the default API key is "apikey-placeholder."
-//
-// Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup.
-func UsingAPIKey(key string) ExporterOption {
-	return func(c *exporterConfig) error {
-		if len(key) == 0 {
-			return errors.New("API key must not be empty")
-		}
-		c.apiKey = key
-		return nil
-	}
 }
 
 // TargetingDataset specifies the name of the Honeycomb dataset to which the
@@ -365,21 +352,22 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 		libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
 	}
 
+	if len(config.APIKey) == 0 {
+		return nil, errors.New("API key must not be empty")
+	}
+
 	econf := exporterConfig{}
 	for _, o := range opts {
 		if err := o(&econf); err != nil {
 			return nil, err
 		}
 	}
-	if len(econf.apiKey) == 0 {
-		econf.apiKey = defaultAPIKey
-	}
 	if len(econf.dataset) == 0 {
 		econf.dataset = defaultDataset
 	}
 
 	libhoneyConfig := libhoney.Config{
-		WriteKey: econf.apiKey,
+		WriteKey: config.APIKey,
 		Dataset:  econf.dataset,
 	}
 	if len(econf.apiURL) != 0 {
