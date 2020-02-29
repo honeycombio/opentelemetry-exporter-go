@@ -51,6 +51,8 @@ type Config struct {
 	// APIHost is the hostname for the Honeycomb API server to which to send
 	// these events. default: https://api.honeycomb.io/
 	APIHost string
+	// UserAgent will set the user agent used by the exporter
+	UserAgent string
 	// OnError is the hook to be called when there is
 	// an error occurred when uploading the span data.
 	// If no custom hook is set, errors are logged.
@@ -137,7 +139,12 @@ func (e *Exporter) Close() {
 func NewExporter(config Config) (*Exporter, error) {
 	// Developer note: bump this with each release
 	versionStr := "0.2.1"
-	libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
+
+	if config.UserAgent != "" {
+		libhoney.UserAgentAddition = config.UserAgent + "/" + versionStr
+	} else {
+		libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
+	}
 
 	if config.ApiKey == "" {
 		config.ApiKey = defaultApiKey
