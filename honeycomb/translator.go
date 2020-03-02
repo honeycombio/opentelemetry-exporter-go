@@ -85,25 +85,31 @@ func createOTelAttributes(attributes *tracepb.Span_Attributes) []core.KeyValue {
 	return oTelAttrs
 }
 
-// Copy Span Links (including their attributes) from an OC Span to an OTel SpanData
-func copySpanLinks(fromSpan *tracepb.Span, toSpan *trace.SpanData) {
-	if fromSpan.Links == nil {
-		return
+// Create Span Links (including their attributes) from an OC Span
+func createSpanLinks(spanLinks *tracepb.Span_Links) []apitrace.Link {
+	if spanLinks == nil {
+		return nil
 	}
 
-	toSpan.Links = make([]apitrace.Link, len(fromSpan.Links.Link))
+	links := make([]apitrace.Link, len(spanLinks.Link))
 
-	for _, link := range fromSpan.Links.Link {
+	for _, link := range spanLinks.Link {
 		traceLink := apitrace.Link{
-			SpanContext: spanContext(link.TraceId, link.SpanId),
+			SpanContext: spanContext(link.GetTraceId(), link.GetSpanId()),
+			Attributes: createOTelAttributes(link.Attributes),
 		}
-
-		traceLink.Attributes = createOTelAttributes(link.Attributes)
-
-		toSpan.Links = append(toSpan.Links, traceLink)
+		links = append(links, traceLink)
 	}
 
-	toSpan.DroppedLinkCount = int(fromSpan.Links.DroppedLinksCount)
+	return links
+}
+
+func getDroppedLinkCount(links *tracepb.Span_Links) int {
+	if links == nil {
+		return 0
+	}
+
+	return int(links.DroppedLinksCount)
 }
 
 // Convert an OC Span to an OTel SpanData
@@ -119,11 +125,11 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	copy(spanData.ParentSpanID[:], span.GetParentSpanId()[:])
 	spanData.SpanKind = oTelSpanKind(span.GetKind())
 	spanData.ChildSpanCount = int(span.GetChildSpanCount().GetValue())
-	copySpanLinks(span, spanData)
+	spanData.Links = createSpanLinks(span.GetLinks())
 	spanData.Attributes = createOTelAttributes(span.GetAttributes())
-
 	spanData.StartTime = TimestampToTime(span.GetStartTime())
 	spanData.EndTime = TimestampToTime(span.GetEndTime())
+	spanData.DroppedLinkCount = getDroppedLinkCount(span.GetLinks())
 
 	return spanData, nil
 }
