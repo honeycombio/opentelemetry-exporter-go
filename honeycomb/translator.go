@@ -11,6 +11,14 @@ import (
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
+func attributeValueAsString(val *tracepb.AttributeValue) string {
+	if wrapper := val.GetStringValue(); wrapper != nil {
+		return wrapper.GetValue()
+	}
+	return ""
+}
+
+// Create a Golang time.Time from a Google protobuf Timestamp.
 func TimestampToTime(ts *timestamp.Timestamp) (t time.Time) {
 	if ts == nil {
 		return
@@ -19,18 +27,19 @@ func TimestampToTime(ts *timestamp.Timestamp) (t time.Time) {
 }
 
 
-func copySpanKind(sd *trace.SpanData, kind tracepb.Span_SpanKind) {
+// Get SpanKind from an OC Span_SpanKind
+func oTelSpanKind(kind tracepb.Span_SpanKind) apitrace.SpanKind {
 	// note that tracepb.SpanKindInternal, tracepb.SpanKindProducer and tracepb.SpanKindConsumer
 	// have no equivalent OC proto type.
 	switch kind {
 		case tracepb.Span_SPAN_KIND_UNSPECIFIED:
-			sd.SpanKind = apitrace.SpanKindUnspecified
+			return apitrace.SpanKindUnspecified
 		case tracepb.Span_SERVER:
-			sd.SpanKind = apitrace.SpanKindServer
+			return apitrace.SpanKindServer
 		case tracepb.Span_CLIENT:
-			sd.SpanKind = apitrace.SpanKindClient
+			return apitrace.SpanKindClient
 		default:
-			sd.SpanKind = apitrace.SpanKindUnspecified
+			return apitrace.SpanKindUnspecified
 	}
 }
 
@@ -48,22 +57,35 @@ func spanContext(traceId []byte, spanId []byte) core.SpanContext {
 	return ctx
 }
 
-func copySpanAttributes(fromSpan *tracepb.Span, toSpan *trace.SpanData) {
-	if fromSpan.Attributes != nil {
-		if fromSpan.Attributes.AttributeMap != nil {
-			toSpan.Attributes = make([]core.KeyValue, len(fromSpan.Attributes.AttributeMap))
-			for key, value := range fromSpan.Attributes.AttributeMap {
-				keyValue := core.KeyValue{
-					Key: core.Key(key),
-					// TODO(posman): handle non-string values
-					Value: core.String(value.GetStringValue().GetValue()),
-				}
-				toSpan.Attributes = append(toSpan.Attributes, keyValue)
-			}
-		}
+// Create []core.KeyValue attributes from an OC *Span_Attributes
+func createOTelAttributes(attributes *tracepb.Span_Attributes) []core.KeyValue {
+	if attributes == nil || attributes.AttributeMap == nil {
+		return nil
 	}
+
+	oTelAttrs := make([]core.KeyValue, len(attributes.AttributeMap))
+
+	for key, attributeValue := range attributes.AttributeMap {
+		keyValue := core.KeyValue{
+			Key: core.Key(key),
+		}
+		switch value := attributeValue.Value.(type) {
+		case *tracepb.AttributeValue_StringValue:
+			keyValue.Value = core.String(attributeValueAsString(attributeValue))
+		case *tracepb.AttributeValue_BoolValue:
+			keyValue.Value = core.Bool(value.BoolValue)
+		case *tracepb.AttributeValue_IntValue:
+			keyValue.Value = core.Int64(value.IntValue)
+		case *tracepb.AttributeValue_DoubleValue:
+			keyValue.Value = core.Float64(value.DoubleValue)
+		}
+		oTelAttrs = append(oTelAttrs, keyValue)
+	}
+
+	return oTelAttrs
 }
 
+// Copy Span Links (including their attributes) from an OC Span to an OTel SpanData
 func copySpanLinks(fromSpan *tracepb.Span, toSpan *trace.SpanData) {
 	if fromSpan.Links == nil {
 		return
@@ -76,19 +98,7 @@ func copySpanLinks(fromSpan *tracepb.Span, toSpan *trace.SpanData) {
 			SpanContext: spanContext(link.TraceId, link.SpanId),
 		}
 
-		if link.Attributes != nil {
-			if link.Attributes.AttributeMap != nil {
-				traceLink.Attributes = make([]core.KeyValue, len(link.Attributes.AttributeMap))
-				for key, value := range link.Attributes.AttributeMap {
-					keyValue := core.KeyValue{
-						Key: core.Key(key),
-						// TODO(posman): handle non-string values
-						Value: core.String(value.GetStringValue().GetValue()),
-					}
-					traceLink.Attributes = append(traceLink.Attributes, keyValue)
-				}
-			}
-		}
+		traceLink.Attributes = createOTelAttributes(link.Attributes)
 
 		toSpan.Links = append(toSpan.Links, traceLink)
 	}
@@ -96,31 +106,24 @@ func copySpanLinks(fromSpan *tracepb.Span, toSpan *trace.SpanData) {
 	toSpan.DroppedLinkCount = int(fromSpan.Links.DroppedLinksCount)
 }
 
-func ProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
+// Convert an OC Span to an OTel SpanData
+func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	if span == nil {
 		return nil, errors.New("expected a non-nil span")
 	}
 
 	spanData := &trace.SpanData{
-		SpanContext: spanContext(span.TraceId, span.SpanId),
+		SpanContext: spanContext(span.GetTraceId(), span.GetSpanId()),
 	}
 
-	// Copy ParentSpanID, Span Kind and ChildSpanCount
-	copy(spanData.ParentSpanID[:], span.ParentSpanId[:])
-	copySpanKind(spanData, span.Kind)
-	spanData.ChildSpanCount = int(span.ChildSpanCount.GetValue())
+	copy(spanData.ParentSpanID[:], span.GetParentSpanId()[:])
+	spanData.SpanKind = oTelSpanKind(span.GetKind())
+	spanData.ChildSpanCount = int(span.GetChildSpanCount().GetValue())
 	copySpanLinks(span, spanData)
-	copySpanAttributes(span, spanData)
+	spanData.Attributes = createOTelAttributes(span.GetAttributes())
 
-	spanData.StartTime = TimestampToTime(span.StartTime)
-	spanData.EndTime = TimestampToTime(span.EndTime)
-
-	// TODO(posman)
-	//	MessageEvents []Event = span.TimeEvents *Span_TimeEvents ????
-	//	Status codes.Code = span.Status *Status
-	//	HasRemoteParent bool = ! span.SameProcessAsParentSpan *wrappers.BoolValue
-	//	DroppedAttributeCount int = ???
-	//	DroppedMessageEventCount int = ???
+	spanData.StartTime = TimestampToTime(span.GetStartTime())
+	spanData.EndTime = TimestampToTime(span.GetEndTime())
 
 	return spanData, nil
 }
