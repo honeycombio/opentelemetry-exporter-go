@@ -58,6 +58,7 @@ func createOTelAttributes(attributes *tracepb.Span_Attributes) []core.KeyValue {
 
 	oTelAttrs := make([]core.KeyValue, len(attributes.AttributeMap))
 
+	i := 0
 	for key, attributeValue := range attributes.AttributeMap {
 		keyValue := core.KeyValue{
 			Key: core.Key(key),
@@ -72,7 +73,8 @@ func createOTelAttributes(attributes *tracepb.Span_Attributes) []core.KeyValue {
 		case *tracepb.AttributeValue_DoubleValue:
 			keyValue.Value = core.Float64(value.DoubleValue)
 		}
-		oTelAttrs = append(oTelAttrs, keyValue)
+		oTelAttrs[i] = keyValue
+		i += 1
 	}
 
 	return oTelAttrs
@@ -86,12 +88,12 @@ func createSpanLinks(spanLinks *tracepb.Span_Links) []apitrace.Link {
 
 	links := make([]apitrace.Link, len(spanLinks.Link))
 
-	for _, link := range spanLinks.Link {
+	for i, link := range spanLinks.Link {
 		traceLink := apitrace.Link{
 			SpanContext: spanContext(link.GetTraceId(), link.GetSpanId()),
 			Attributes: createOTelAttributes(link.Attributes),
 		}
-		links = append(links, traceLink)
+		links[i] = traceLink
 	}
 
 	return links
