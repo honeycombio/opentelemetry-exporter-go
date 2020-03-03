@@ -122,6 +122,14 @@ func getChildSpanCount(span *tracepb.Span) int {
 	return 0
 }
 
+func getSpanName(span *tracepb.Span) string {
+	if name := span.GetName(); name != nil {
+		return name.GetValue()
+	}
+
+	return ""
+}
+
 // Convert an OC Span to an OTel SpanData
 func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	if span == nil {
@@ -133,6 +141,7 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	}
 
 	copy(spanData.ParentSpanID[:], span.GetParentSpanId()[:])
+	spanData.Name = getSpanName(span)
 	spanData.SpanKind = oTelSpanKind(span.GetKind())
 	spanData.ChildSpanCount = int(span.GetChildSpanCount().GetValue())
 	spanData.Links = createSpanLinks(span.GetLinks())
