@@ -11,13 +11,6 @@ import (
 	apitrace "go.opentelemetry.io/otel/api/trace"
 )
 
-func attributeValueAsString(val *tracepb.AttributeValue) string {
-	if wrapper := val.GetStringValue(); wrapper != nil {
-		return wrapper.GetValue()
-	}
-	return ""
-}
-
 // Create a Golang time.Time from a Google protobuf Timestamp.
 func TimestampToTime(ts *timestamp.Timestamp) (t time.Time) {
 	if ts == nil {
@@ -104,12 +97,29 @@ func createSpanLinks(spanLinks *tracepb.Span_Links) []apitrace.Link {
 	return links
 }
 
-func getDroppedLinkCount(links *tracepb.Span_Links) int {
-	if links == nil {
-		return 0
+func attributeValueAsString(val *tracepb.AttributeValue) string {
+	if wrapper := val.GetStringValue(); wrapper != nil {
+		return wrapper.GetValue()
 	}
 
-	return int(links.DroppedLinksCount)
+	return ""
+}
+
+
+func getDroppedLinkCount(links *tracepb.Span_Links) int {
+	if links != nil {
+		return int(links.DroppedLinksCount)
+	}
+
+	return 0
+}
+
+func getChildSpanCount(span *tracepb.Span) int {
+	if count := span.GetChildSpanCount(); count != nil {
+		return int(count.GetValue())
+	}
+
+	return 0
 }
 
 // Convert an OC Span to an OTel SpanData
@@ -130,6 +140,7 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	spanData.StartTime = TimestampToTime(span.GetStartTime())
 	spanData.EndTime = TimestampToTime(span.GetEndTime())
 	spanData.DroppedLinkCount = getDroppedLinkCount(span.GetLinks())
+	spanData.ChildSpanCount = getChildSpanCount(span)
 
 	return spanData, nil
 }
