@@ -6,12 +6,12 @@ import (
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/api/core"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-// Create a Golang time.Time from a Google protobuf Timestamp.
+// TimestampToTime creates a Go time.Time value from a Google protobuf Timestamp.
 func TimestampToTime(ts *timestamp.Timestamp) (t time.Time) {
 	if ts == nil {
 		return
@@ -19,33 +19,32 @@ func TimestampToTime(ts *timestamp.Timestamp) (t time.Time) {
 	return time.Unix(ts.Seconds, int64(ts.Nanos))
 }
 
-
 // Get SpanKind from an OC Span_SpanKind
 func oTelSpanKind(kind tracepb.Span_SpanKind) apitrace.SpanKind {
 	// note that tracepb.SpanKindInternal, tracepb.SpanKindProducer and tracepb.SpanKindConsumer
 	// have no equivalent OC proto type.
 	switch kind {
-		case tracepb.Span_SPAN_KIND_UNSPECIFIED:
-			return apitrace.SpanKindUnspecified
-		case tracepb.Span_SERVER:
-			return apitrace.SpanKindServer
-		case tracepb.Span_CLIENT:
-			return apitrace.SpanKindClient
-		default:
-			return apitrace.SpanKindUnspecified
+	case tracepb.Span_SPAN_KIND_UNSPECIFIED:
+		return apitrace.SpanKindUnspecified
+	case tracepb.Span_SERVER:
+		return apitrace.SpanKindServer
+	case tracepb.Span_CLIENT:
+		return apitrace.SpanKindClient
+	default:
+		return apitrace.SpanKindUnspecified
 	}
 }
 
 // Creates an OpenTelemetry SpanContext from information in an OC Span.
-// Note that the OC Span has no equivalent to TraceFlags field in the 
+// Note that the OC Span has no equivalent to TraceFlags field in the
 // OpenTelemetry SpanContext type.
-func spanContext(traceId []byte, spanId []byte) core.SpanContext {
+func spanContext(traceID []byte, spanID []byte) core.SpanContext {
 	ctx := core.SpanContext{}
-	if traceId != nil {
-		copy(ctx.TraceID[:], traceId[:])
+	if traceID != nil {
+		copy(ctx.TraceID[:], traceID[:])
 	}
-	if spanId != nil {
-		copy(ctx.SpanID[:], spanId[:])
+	if spanID != nil {
+		copy(ctx.SpanID[:], spanID[:])
 	}
 	return ctx
 }
@@ -74,7 +73,7 @@ func createOTelAttributes(attributes *tracepb.Span_Attributes) []core.KeyValue {
 			keyValue.Value = core.Float64(value.DoubleValue)
 		}
 		oTelAttrs[i] = keyValue
-		i += 1
+		i++
 	}
 
 	return oTelAttrs
@@ -91,7 +90,7 @@ func createSpanLinks(spanLinks *tracepb.Span_Links) []apitrace.Link {
 	for i, link := range spanLinks.Link {
 		traceLink := apitrace.Link{
 			SpanContext: spanContext(link.GetTraceId(), link.GetSpanId()),
-			Attributes: createOTelAttributes(link.Attributes),
+			Attributes:  createOTelAttributes(link.Attributes),
 		}
 		links[i] = traceLink
 	}
@@ -106,7 +105,6 @@ func attributeValueAsString(val *tracepb.AttributeValue) string {
 
 	return ""
 }
-
 
 func getDroppedLinkCount(links *tracepb.Span_Links) int {
 	if links != nil {
@@ -132,7 +130,7 @@ func getSpanName(span *tracepb.Span) string {
 	return ""
 }
 
-// Convert an OC Span to an OTel SpanData
+// OCProtoSpanToOTelSpanData converts an OC Span to an OTel SpanData.
 func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	if span == nil {
 		return nil, errors.New("expected a non-nil span")
@@ -155,5 +153,3 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 
 	return spanData, nil
 }
-
-
