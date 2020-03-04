@@ -235,10 +235,12 @@ func WithAPIURL(url string) ExporterOption {
 // server. This value is appended to the user agent value from the libhoney
 // library.
 //
-// If not specified, the default value is "Honeycomb-OpenTelemetry-exporter." If
-// specified as an empty string, no user agent details are appended.
+// If not specified, the default value is "Honeycomb-OpenTelemetry-exporter."
 func WithUserAgentAddendum(a string) ExporterOption {
 	return func(c *exporterConfig) error {
+		if len(a) == 0 {
+			return errors.New("user agent addendum must not be empty")
+		}
 		c.userAgentAddendum = a
 		return nil
 	}
@@ -366,9 +368,7 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 		return nil, errors.New("API key must not be empty")
 	}
 
-	econf := exporterConfig{
-		userAgentAddendum: "Honeycomb-OpenTelemetry-exporter",
-	}
+	econf := exporterConfig{}
 	for _, o := range opts {
 		if err := o(&econf); err != nil {
 			return nil, err
@@ -385,9 +385,11 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	if len(econf.apiURL) != 0 {
 		libhoneyConfig.APIHost = econf.apiURL
 	}
-	if userAgent := econf.userAgentAddendum; len(userAgent) != 0 {
-		libhoney.UserAgentAddition = userAgent + "/" + versionStr
+	userAgent := econf.userAgentAddendum
+	if len(userAgent) == 0 {
+		userAgent = "Honeycomb-OpenTelemetry-exporter"
 	}
+	libhoney.UserAgentAddition = userAgent + "/" + versionStr
 	if econf.output != nil {
 		libhoneyConfig.Output = econf.output
 	}
