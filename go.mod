@@ -11,15 +11,15 @@ require (
 	github.com/facebookgo/muster v0.0.0-20150708232844-fd3d7953fd52 // indirect
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.4
 	github.com/google/uuid v1.1.1
-	github.com/honeycombio/libhoney-go v1.12.0
-	github.com/klauspost/compress v1.9.0 // indirect
+	github.com/honeycombio/libhoney-go v1.12.2
+	github.com/klauspost/compress v1.10.2 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
-	go.opentelemetry.io/otel v0.2.1
-	golang.org/x/net v0.0.0-20191021144547-ec77196f6094 // indirect
+	go.opentelemetry.io/otel v0.2.3
+	golang.org/x/net v0.0.0-20200301022130-244492dfa37a // indirect
 	google.golang.org/appengine v1.6.5 // indirect
-	google.golang.org/grpc v1.24.0
+	google.golang.org/grpc v1.27.1
 	gopkg.in/alexcesaro/statsd.v2 v2.0.0 // indirect
 )
