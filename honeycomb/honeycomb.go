@@ -45,14 +45,15 @@ type Config struct {
 }
 
 type exporterConfig struct {
-	dataset       string
-	serviceName   string
-	staticFields  map[string]interface{}
-	dynamicFields map[string]func() interface{}
-	apiURL        string
-	output        libhoney.Output
-	onError       func(error)
-	debug         bool
+	dataset           string
+	serviceName       string
+	staticFields      map[string]interface{}
+	dynamicFields     map[string]func() interface{}
+	apiURL            string
+	userAgentAddendum string
+	output            libhoney.Output
+	onError           func(error)
+	debug             bool
 }
 
 const (
@@ -229,6 +230,20 @@ func WithAPIURL(url string) ExporterOption {
 	}
 }
 
+// WithUserAgentAddendum specifies additional HTTP user agent-related detail to
+// include in HTTP requests issued to send events to the Honeycomb API
+// server. This value is appended to the user agent value from the libhoney
+// library.
+//
+// If not specified, the default value is "Honeycomb-OpenTelemetry-exporter." If
+// specified as an empty string, no user agent details are appended.
+func WithUserAgentAddendum(a string) ExporterOption {
+	return func(c *exporterConfig) error {
+		c.userAgentAddendum = a
+		return nil
+	}
+}
+
 // CallingOnError specifies a hook function to be called when an error occurs
 // sending events to Honeycomb.
 //
@@ -346,17 +361,14 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	// TODO: Stamp this via a variable set at link time with a value derived
 	// from the current VCS tag.
 	const versionStr = "0.2.1"
-	if config.UserAgent != "" {
-		libhoney.UserAgentAddition = config.UserAgent + "/" + versionStr
-	} else {
-		libhoney.UserAgentAddition = "Honeycomb-OpenTelemetry-exporter/" + versionStr
-	}
 
 	if len(config.APIKey) == 0 {
 		return nil, errors.New("API key must not be empty")
 	}
 
-	econf := exporterConfig{}
+	econf := exporterConfig{
+		userAgentAddendum: "Honeycomb-OpenTelemetry-exporter",
+	}
 	for _, o := range opts {
 		if err := o(&econf); err != nil {
 			return nil, err
@@ -372,6 +384,9 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	}
 	if len(econf.apiURL) != 0 {
 		libhoneyConfig.APIHost = econf.apiURL
+	}
+	if userAgent := econf.userAgentAddendum; len(userAgent) != 0 {
+		libhoney.UserAgentAddition = userAgent + "/" + versionStr
 	}
 	if econf.output != nil {
 		libhoneyConfig.Output = econf.output
