@@ -33,3 +33,7 @@ workflows:
           goversion: "11"
       - test_opentelemetry:
           goversion: "12"
+      - test_opentelemetry:
+          goversion: "13"
+      - test_opentelemetry:
+          goversion: "14"
