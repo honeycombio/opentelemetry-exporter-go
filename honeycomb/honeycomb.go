@@ -138,7 +138,7 @@ func (e *Exporter) Close() {
 // Don't have a Honeycomb account? Sign up at https://ui.honeycomb.io/signup
 func NewExporter(config Config) (*Exporter, error) {
 	// Developer note: bump this with each release
-	versionStr := "0.2.1"
+	versionStr := "0.3.0"
 
 	if config.UserAgent != "" {
 		libhoney.UserAgentAddition = config.UserAgent + "/" + versionStr
