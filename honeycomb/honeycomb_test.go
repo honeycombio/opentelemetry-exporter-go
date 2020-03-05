@@ -179,13 +179,13 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Equal(expectedSpanID, spanID)
 
 	name := mainEventFields["name"]
-	assert.Equal("honeycomb/test/myTestSpan", name)
+	assert.Equal("myTestSpan", name)
 
 	durationMilli := mainEventFields["duration_ms"]
 	durationMilliFl, ok := durationMilli.(float64)
 	assert.True(ok)
 	assert.Greater(durationMilliFl, 0.0)
-	assert.Less(durationMilliFl, 1.0)
+	assert.Less(durationMilliFl, 5.0)
 
 	serviceName := mainEventFields["service_name"]
 	assert.Equal("opentelemetry-test", serviceName)
@@ -230,7 +230,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal(expectedSpanID, spanID)
 
 	name := messageEventFields["name"]
-	assert.Equal("honeycomb/test/myTestSpan", name)
+	assert.Equal("myTestSpan", name)
 
 	durationMilli := messageEventFields["duration_ms"]
 	durationMilliFl, ok := durationMilli.(float64)
