@@ -11,8 +11,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
-// TimestampToTime creates a Go time.Time value from a Google protobuf Timestamp.
-func TimestampToTime(ts *timestamp.Timestamp) (t time.Time) {
+// timestampToTime creates a Go time.Time value from a Google protobuf Timestamp.
+func timestampToTime(ts *timestamp.Timestamp) (t time.Time) {
 	if ts == nil {
 		return
 	}
@@ -146,8 +146,8 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	spanData.ChildSpanCount = int(span.GetChildSpanCount().GetValue())
 	spanData.Links = createSpanLinks(span.GetLinks())
 	spanData.Attributes = createOTelAttributes(span.GetAttributes())
-	spanData.StartTime = TimestampToTime(span.GetStartTime())
-	spanData.EndTime = TimestampToTime(span.GetEndTime())
+	spanData.StartTime = timestampToTime(span.GetStartTime())
+	spanData.EndTime = timestampToTime(span.GetEndTime())
 	spanData.DroppedLinkCount = getDroppedLinkCount(span.GetLinks())
 	spanData.ChildSpanCount = getChildSpanCount(span)
 
