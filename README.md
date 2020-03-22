@@ -14,7 +14,7 @@ exporter, _ := honeycomb.NewExporter(
 		APIKey:  <YOUR-API-KEY>,
 	},
 	honeycomb.TargetingDataset(<YOUR-DATASET>),
-	honeycomb.WithServiceName("example-server),
+	honeycomb.WithServiceName("example-server"),
 	honeycomb.WithDebugEnabled()) // optional to output diagnostic logs to STDOUT
 
 defer exporter.Close()
