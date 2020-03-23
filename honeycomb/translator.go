@@ -2,6 +2,7 @@ package honeycomb
 
 import (
 	"errors"
+	"google.golang.org/grpc/codes"
 	"time"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -130,6 +131,22 @@ func getSpanName(span *tracepb.Span) string {
 	return ""
 }
 
+func getHasRemoteParent(span *tracepb.Span) bool {
+	if sameProcess := span.GetSameProcessAsParentSpan(); sameProcess != nil {
+		return !sameProcess.Value
+	}
+
+	return false
+}
+
+func getStatus(span *tracepb.Span) codes.Code {
+	if span.Status != nil {
+		return codes.Code(span.Status.Code)
+	}
+
+	return codes.OK
+}
+
 // OCProtoSpanToOTelSpanData converts an OC Span to an OTel SpanData.
 func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	if span == nil {
@@ -143,11 +160,12 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	copy(spanData.ParentSpanID[:], span.GetParentSpanId()[:])
 	spanData.Name = getSpanName(span)
 	spanData.SpanKind = oTelSpanKind(span.GetKind())
-	spanData.ChildSpanCount = int(span.GetChildSpanCount().GetValue())
 	spanData.Links = createSpanLinks(span.GetLinks())
 	spanData.Attributes = createOTelAttributes(span.GetAttributes())
 	spanData.StartTime = timestampToTime(span.GetStartTime())
 	spanData.EndTime = timestampToTime(span.GetEndTime())
+	spanData.Status = getStatus(span)
+	spanData.HasRemoteParent = getHasRemoteParent(span)
 	spanData.DroppedLinkCount = getDroppedLinkCount(span.GetLinks())
 	spanData.ChildSpanCount = getChildSpanCount(span)
 
