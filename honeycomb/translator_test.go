@@ -1,6 +1,10 @@
 package honeycomb
 
 import (
+	"math"
+	"testing"
+	"time"
+
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/wrappers"
@@ -10,14 +14,12 @@ import (
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 	"google.golang.org/grpc/codes"
-	"math"
-	"testing"
-	"time"
 )
 
 func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 	start := time.Now()
 	end := start.Add(10 * time.Millisecond)
+	annotationTime := start.Add(3 * time.Millisecond)
 
 	startTimestamp, err := ptypes.TimestampProto(start)
 	if err != nil {
@@ -27,30 +29,34 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to convert time to timestamp: %v", err)
 	}
+	annotationTimestamp, err := ptypes.TimestampProto(annotationTime)
+	if err != nil {
+		t.Fatalf("failed to convert time to timestamp: %v", err)
+	}
 
 	span := tracepb.Span{
-		TraceId: []byte{0x02},
-		SpanId: []byte{0x03},
+		TraceId:      []byte{0x02},
+		SpanId:       []byte{0x03},
 		ParentSpanId: []byte{0x01},
-		Name: &tracepb.TruncatableString{Value:"trace-name"},
-		Kind: tracepb.Span_CLIENT,
-		StartTime: startTimestamp,
-		EndTime: endTimestamp,
+		Name:         &tracepb.TruncatableString{Value: "trace-name"},
+		Kind:         tracepb.Span_CLIENT,
+		StartTime:    startTimestamp,
+		EndTime:      endTimestamp,
 		Attributes: &tracepb.Span_Attributes{
 			AttributeMap: map[string]*tracepb.AttributeValue{
 				"some-string": {
 					Value: &tracepb.AttributeValue_StringValue{
-						StringValue: &tracepb.TruncatableString{Value:"some-value"},
+						StringValue: &tracepb.TruncatableString{Value: "some-value"},
 					},
 				},
 				"some-double": {
 					Value: &tracepb.AttributeValue_DoubleValue{DoubleValue: math.Pi},
 				},
 				"some-int": {
-					Value: &tracepb.AttributeValue_IntValue{IntValue:42},
+					Value: &tracepb.AttributeValue_IntValue{IntValue: 42},
 				},
 				"some-boolean": {
-					Value: &tracepb.AttributeValue_BoolValue{BoolValue:true},
+					Value: &tracepb.AttributeValue_BoolValue{BoolValue: true},
 				},
 			},
 		},
@@ -70,18 +76,39 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 			},
 			DroppedLinksCount: 2,
 		},
-		Status: &tracepb.Status{Code: int32(codes.Unknown)},
+		TimeEvents: &tracepb.Span_TimeEvents{
+			TimeEvent: []*tracepb.Span_TimeEvent{
+				{
+					Time: annotationTimestamp,
+					Value: &tracepb.Span_TimeEvent_Annotation_{
+						Annotation: &tracepb.Span_TimeEvent_Annotation{
+							Description: &tracepb.TruncatableString{Value: "test-event"},
+							Attributes: &tracepb.Span_Attributes{
+								AttributeMap: map[string]*tracepb.AttributeValue{
+									"annotation-attr": {
+										Value: &tracepb.AttributeValue_StringValue{
+											StringValue: &tracepb.TruncatableString{Value: "annotation-val"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Status:                  &tracepb.Status{Code: int32(codes.Unknown)},
 		SameProcessAsParentSpan: &wrappers.BoolValue{Value: false},
-		ChildSpanCount: &wrappers.UInt32Value{Value: 5},
+		ChildSpanCount:          &wrappers.UInt32Value{Value: 5},
 	}
 
 	want := &trace.SpanData{
-		SpanContext: spanContext([]byte{0x02}, []byte{0x03}),
+		SpanContext:  spanContext([]byte{0x02}, []byte{0x03}),
 		ParentSpanID: core.SpanID{0x01},
-		SpanKind: apitrace.SpanKindClient,
-		Name: "trace-name",
-		StartTime: time.Unix(int64(start.Unix()), int64(start.Nanosecond())),
-		EndTime: time.Unix(int64(end.Unix()), int64(end.Nanosecond())),
+		SpanKind:     apitrace.SpanKindClient,
+		Name:         "trace-name",
+		StartTime:    time.Unix(start.Unix(), int64(start.Nanosecond())),
+		EndTime:      time.Unix(end.Unix(), int64(end.Nanosecond())),
 		Attributes: []core.KeyValue{
 			core.Key("some-string").String("some-value"),
 			core.Key("some-double").Float64(math.Pi),
@@ -96,10 +123,19 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 				},
 			},
 		},
-		Status: codes.Unknown,
-		HasRemoteParent: true,
+		MessageEvents: []trace.Event{
+			{
+				Name: "test-event",
+				Time: time.Unix(annotationTime.Unix(), int64(annotationTime.Nanosecond())),
+				Attributes: []core.KeyValue{
+					core.Key("annotation-attr").String("annotation-val"),
+				},
+			},
+		},
+		Status:           codes.Unknown,
+		HasRemoteParent:  true,
 		DroppedLinkCount: 2,
-		ChildSpanCount: 5,
+		ChildSpanCount:   5,
 	}
 
 	got, err := OCProtoSpanToOTelSpanData(&span)
