@@ -351,7 +351,7 @@ func honeycombSpan(s *trace.SpanData) *span {
 		hcSpan.DurationMilli = float64(e.Sub(s)) / float64(time.Millisecond)
 	}
 
-	if s.Status != codes.OK {
+	if s.StatusCode != codes.OK {
 		hcSpan.Error = true
 	}
 	return hcSpan
@@ -362,7 +362,7 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	// Developer note: bump this with each release
 	// TODO: Stamp this via a variable set at link time with a value derived
 	// from the current VCS tag.
-	const versionStr = "0.2.3"
+	const versionStr = "0.3.0"
 
 	if len(config.APIKey) == 0 {
 		return nil, errors.New("API key must not be empty")
@@ -492,9 +492,10 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		ev.AddField(string(kv.Key), kv.Value.AsInterface())
 	}
 
-	ev.AddField("status.code", int32(data.Status))
+	ev.AddField("status.code", int32(data.StatusCode))
+	ev.AddField("status.message", data.StatusMessage)
 	// If the status isn't zero, set error to be true.
-	if data.Status != 0 {
+	if data.StatusCode != codes.OK {
 		ev.AddField("error", true)
 	}
 
