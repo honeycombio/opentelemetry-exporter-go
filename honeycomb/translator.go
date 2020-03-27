@@ -2,6 +2,7 @@ package honeycomb
 
 import (
 	"errors"
+	"google.golang.org/grpc/codes"
 	"time"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -98,6 +99,33 @@ func createSpanLinks(spanLinks *tracepb.Span_Links) []apitrace.Link {
 	return links
 }
 
+func createMessageEvents(spanEvents *tracepb.Span_TimeEvents) []trace.Event {
+	if spanEvents == nil {
+		return nil
+	}
+
+	annotations := 0
+	for _, event := range spanEvents.TimeEvent {
+		if annotation := event.GetAnnotation(); annotation != nil {
+			annotations++
+		}
+	}
+
+	events := make([]trace.Event, annotations)
+
+	for i, event := range spanEvents.TimeEvent {
+		if annotation := event.GetAnnotation(); annotation != nil {
+			events[i] = trace.Event{
+				Time:       timestampToTime(event.GetTime()),
+				Name:       annotation.GetDescription().GetValue(),
+				Attributes: createOTelAttributes(annotation.GetAttributes()),
+			}
+		}
+	}
+
+	return events
+}
+
 func attributeValueAsString(val *tracepb.AttributeValue) string {
 	if wrapper := val.GetStringValue(); wrapper != nil {
 		return wrapper.GetValue()
@@ -130,6 +158,34 @@ func getSpanName(span *tracepb.Span) string {
 	return ""
 }
 
+func getHasRemoteParent(span *tracepb.Span) bool {
+	if sameProcess := span.GetSameProcessAsParentSpan(); sameProcess != nil {
+		return !sameProcess.Value
+	}
+
+	return false
+}
+
+func getStatusCode(span *tracepb.Span) codes.Code {
+	if span.Status != nil {
+		return codes.Code(span.Status.Code)
+	}
+
+	return codes.OK
+}
+
+func getStatusMessage(span *tracepb.Span) string {
+	if span.Status != nil {
+		if span.Status.Message != "" {
+			return span.Status.Message
+		} else {
+			return codes.Code(span.Status.Code).String()
+		}
+	}
+
+	return codes.OK.String()
+}
+
 // OCProtoSpanToOTelSpanData converts an OC Span to an OTel SpanData.
 func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	if span == nil {
@@ -143,11 +199,14 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	copy(spanData.ParentSpanID[:], span.GetParentSpanId()[:])
 	spanData.Name = getSpanName(span)
 	spanData.SpanKind = oTelSpanKind(span.GetKind())
-	spanData.ChildSpanCount = int(span.GetChildSpanCount().GetValue())
 	spanData.Links = createSpanLinks(span.GetLinks())
 	spanData.Attributes = createOTelAttributes(span.GetAttributes())
+	spanData.MessageEvents = createMessageEvents(span.GetTimeEvents())
 	spanData.StartTime = timestampToTime(span.GetStartTime())
 	spanData.EndTime = timestampToTime(span.GetEndTime())
+	spanData.StatusCode = getStatusCode(span)
+	spanData.StatusMessage = getStatusMessage(span)
+	spanData.HasRemoteParent = getHasRemoteParent(span)
 	spanData.DroppedLinkCount = getDroppedLinkCount(span.GetLinks())
 	spanData.ChildSpanCount = getChildSpanCount(span)
 
