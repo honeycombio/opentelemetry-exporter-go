@@ -174,6 +174,18 @@ func getStatusCode(span *tracepb.Span) codes.Code {
 	return codes.OK
 }
 
+func getStatusMessage(span *tracepb.Span) string {
+	if span.Status != nil {
+		if span.Status.Message != "" {
+			return span.Status.Message
+		} else {
+			return codes.Code(span.Status.Code).String()
+		}
+	}
+
+	return codes.OK.String()
+}
+
 // OCProtoSpanToOTelSpanData converts an OC Span to an OTel SpanData.
 func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	if span == nil {
@@ -193,6 +205,7 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	spanData.StartTime = timestampToTime(span.GetStartTime())
 	spanData.EndTime = timestampToTime(span.GetEndTime())
 	spanData.StatusCode = getStatusCode(span)
+	spanData.StatusMessage = getStatusMessage(span)
 	spanData.HasRemoteParent = getHasRemoteParent(span)
 	spanData.DroppedLinkCount = getDroppedLinkCount(span.GetLinks())
 	spanData.ChildSpanCount = getChildSpanCount(span)

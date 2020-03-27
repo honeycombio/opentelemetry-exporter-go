@@ -97,7 +97,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 				},
 			},
 		},
-		Status:                  &tracepb.Status{Code: int32(codes.Unknown)},
+		Status:                  &tracepb.Status{Code: int32(codes.Unknown), Message: "status message"},
 		SameProcessAsParentSpan: &wrappers.BoolValue{Value: false},
 		ChildSpanCount:          &wrappers.UInt32Value{Value: 5},
 	}
@@ -133,6 +133,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 			},
 		},
 		StatusCode:       codes.Unknown,
+		StatusMessage:    "status message",
 		HasRemoteParent:  true,
 		DroppedLinkCount: 2,
 		ChildSpanCount:   5,
