@@ -5,7 +5,7 @@ executors:
     parameters:
       goversion:
         type: string
-        default: "11"
+        default: "14"
     docker:
       - image: circleci/golang:1.<< parameters.goversion >>
         environment:
@@ -17,7 +17,7 @@ jobs:
     parameters:
       goversion:
         type: string
-        default: "11"
+        default: "14"
     executor:
       name: go
       goversion: "<< parameters.goversion >>"
@@ -29,10 +29,6 @@ jobs:
 workflows:
   build:
     jobs:
-      - test_opentelemetry:
-          goversion: "11"
-      - test_opentelemetry:
-          goversion: "12"
       - test_opentelemetry:
           goversion: "13"
       - test_opentelemetry:
