@@ -166,7 +166,7 @@ func getHasRemoteParent(span *tracepb.Span) bool {
 	return false
 }
 
-func getStatus(span *tracepb.Span) codes.Code {
+func getStatusCode(span *tracepb.Span) codes.Code {
 	if span.Status != nil {
 		return codes.Code(span.Status.Code)
 	}
@@ -192,7 +192,7 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	spanData.MessageEvents = createMessageEvents(span.GetTimeEvents())
 	spanData.StartTime = timestampToTime(span.GetStartTime())
 	spanData.EndTime = timestampToTime(span.GetEndTime())
-	spanData.Status = getStatus(span)
+	spanData.StatusCode = getStatusCode(span)
 	spanData.HasRemoteParent = getHasRemoteParent(span)
 	spanData.DroppedLinkCount = getDroppedLinkCount(span.GetLinks())
 	spanData.ChildSpanCount = getChildSpanCount(span)

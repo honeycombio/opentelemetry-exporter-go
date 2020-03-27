@@ -132,7 +132,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 				},
 			},
 		},
-		Status:           codes.Unknown,
+		StatusCode:       codes.Unknown,
 		HasRemoteParent:  true,
 		DroppedLinkCount: 2,
 		ChildSpanCount:   5,
