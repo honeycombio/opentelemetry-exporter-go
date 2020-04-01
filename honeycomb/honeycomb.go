@@ -362,7 +362,7 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	// Developer note: bump this with each release
 	// TODO: Stamp this via a variable set at link time with a value derived
 	// from the current VCS tag.
-	const versionStr = "0.3.1"
+	const versionStr = "0.4.0"
 
 	if len(config.APIKey) == 0 {
 		return nil, errors.New("API key must not be empty")
