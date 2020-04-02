@@ -499,6 +499,15 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		ev.AddField("error", true)
 	}
 
+	// Treat resource-defined attributes as overlays, taking precedent over any same-keyed span
+	// attributes. Apply them last.
+	if data.Resource != nil {
+		for _, kv := range data.Resource.Attributes() {
+			// TODO(seh): Should we skip the boxing of values here and use Emit instead?
+			ev.AddField(string(kv.Key), kv.Value.AsInterface())
+		}
+	}
+
 	if err := ev.SendPresampled(); err != nil {
 		e.onError(err)
 	}
