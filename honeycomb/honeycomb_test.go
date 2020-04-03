@@ -258,7 +258,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal("handling this...", msgEventName)
 
 	attribute := mainEventFields["request-handled"]
-	assert.Equal("100", attribute)
+	assert.Equal(int64(100), attribute)
 
 	msgEventTraceID := mainEventFields["trace.trace_id"]
 	assert.Equal(honeycombTranslatedTraceID, msgEventTraceID)

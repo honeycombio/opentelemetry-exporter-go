@@ -437,7 +437,6 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	applyResourceAttributes := func(ev *libhoney.Event) {
 		if data.Resource != nil {
 			for _, kv := range data.Resource.Attributes() {
-				// TODO(seh): Should we skip the boxing of values here and use Emit instead?
 				ev.AddField(string(kv.Key), kv.Value.AsInterface())
 			}
 		}
@@ -451,7 +450,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		}
 
 		for _, kv := range a.Attributes {
-			spanEv.AddField(string(kv.Key), kv.Value.Emit())
+			spanEv.AddField(string(kv.Key), kv.Value.AsInterface())
 		}
 		// Treat resource-defined attributes as overlays, taking precedent over any same-keyed
 		// message event attributes. Apply them last.
