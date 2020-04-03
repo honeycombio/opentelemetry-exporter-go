@@ -278,10 +278,7 @@ func WithDebug(d bool) ExporterOption {
 // If you're having trouble getting the exporter to work, try enabling this
 // logging in a development environment to help diagnose the problem.
 func WithDebugEnabled() ExporterOption {
-	return func(c *exporterConfig) error {
-		c.debug = true
-		return nil
-	}
+	return WithDebug(true)
 }
 
 // withHoneycombOutput sets the event output handler on the Honeycomb event
