@@ -52,7 +52,7 @@ func main() {
 		},
 		honeycomb.TargetingDataset(*dataset),
 		honeycomb.WithServiceName("opentelemetry-server"),
-		honeycomb.WithDebugEnabled())
+		honeycomb.WithDebugEnabled(true))
 	if err != nil {
 		log.Fatal(err)
 	}

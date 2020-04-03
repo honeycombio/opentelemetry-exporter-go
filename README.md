@@ -15,7 +15,7 @@ exporter, _ := honeycomb.NewExporter(
 	},
 	honeycomb.TargetingDataset(<YOUR-DATASET>),
 	honeycomb.WithServiceName("example-server"),
-	honeycomb.WithDebugEnabled()) // optional to output diagnostic logs to STDOUT
+	honeycomb.WithDebugEnabled(true)) // optional to output diagnostic logs to STDOUT
 
 defer exporter.Close()
 sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
