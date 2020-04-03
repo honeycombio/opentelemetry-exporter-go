@@ -434,6 +434,14 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	ev.Timestamp = data.StartTime
 	ev.Add(honeycombSpan(data))
 
+	applyResourceAttributes := func(ev *libhoney.Event) {
+		if data.Resource != nil {
+			for _, kv := range data.Resource.Attributes() {
+				ev.AddField(string(kv.Key), kv.Value.AsInterface())
+			}
+		}
+	}
+
 	// We send these message events as zero-duration spans.
 	for _, a := range data.MessageEvents {
 		spanEv := e.builder.NewEvent()
@@ -442,8 +450,11 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		}
 
 		for _, kv := range a.Attributes {
-			spanEv.AddField(string(kv.Key), kv.Value.Emit())
+			spanEv.AddField(string(kv.Key), kv.Value.AsInterface())
 		}
+		// Treat resource-defined attributes as overlays, taking precedent over any same-keyed
+		// message event attributes. Apply them last.
+		applyResourceAttributes(spanEv)
 		spanEv.Timestamp = a.Time
 
 		spanEv.Add(spanEvent{
@@ -491,6 +502,9 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	for _, kv := range data.Attributes {
 		ev.AddField(string(kv.Key), kv.Value.AsInterface())
 	}
+	// Treat resource-defined attributes as overlays, taking precedent over any same-keyed span
+	// attributes. Apply them last.
+	applyResourceAttributes(ev)
 
 	ev.AddField("status.code", int32(data.StatusCode))
 	ev.AddField("status.message", data.StatusMessage)

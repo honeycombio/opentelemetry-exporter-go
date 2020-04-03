@@ -123,28 +123,39 @@ func TestExport(t *testing.T) {
 	}
 }
 
-func setUpTestExporter(mockHoneycomb *libhoney.MockOutput, opts ...ExporterOption) (apitrace.Tracer, error) {
-	exporter, err := NewExporter(
+func makeTestExporter(mockHoneycomb *libhoney.MockOutput, opts ...ExporterOption) (*Exporter, error) {
+	return NewExporter(
 		Config{
 			APIKey: "overridden",
 		},
 		append(opts,
 			TargetingDataset("test"),
 			WithServiceName("opentelemetry-test"),
-			withHoneycombOutput(mockHoneycomb))...)
-	if err != nil {
-		return nil, err
-	}
+			withHoneycombOutput(mockHoneycomb))...,
+	)
+}
 
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exporter))
+func setUpTestProvider(exporter exporttrace.SpanSyncer, opts ...sdktrace.ProviderOption) (apitrace.Tracer, error) {
+	tp, err := sdktrace.NewProvider(
+		append([]sdktrace.ProviderOption{
+			sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+			sdktrace.WithSyncer(exporter),
+		}, opts...)...,
+	)
 	if err != nil {
 		return nil, err
 	}
 	global.SetTraceProvider(tp)
 
-	tr := global.TraceProvider().Tracer("honeycomb/test")
-	return tr, nil
+	return global.TraceProvider().Tracer("honeycomb/test"), nil
+}
+
+func setUpTestExporter(mockHoneycomb *libhoney.MockOutput, opts ...ExporterOption) (apitrace.Tracer, error) {
+	exporter, err := makeTestExporter(mockHoneycomb, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return setUpTestProvider(exporter)
 }
 
 func TestHoneycombOutput(t *testing.T) {
@@ -247,7 +258,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal("handling this...", msgEventName)
 
 	attribute := mainEventFields["request-handled"]
-	assert.Equal("100", attribute)
+	assert.Equal(int64(100), attribute)
 
 	msgEventTraceID := mainEventFields["trace.trace_id"]
 	assert.Equal(honeycombTranslatedTraceID, msgEventTraceID)
@@ -547,4 +558,52 @@ func TestHoneycombOutputWithStaticAndDynamicFields(t *testing.T) {
 	assert.Equal(3, mainEventFields["a"])
 	assert.Equal(baseValue+4, mainEventFields["b"])
 	assert.Equal(baseValue+5, mainEventFields["c"])
+}
+
+func TestHoneycombOutputWithResource(t *testing.T) {
+	mockHoneycomb := &libhoney.MockOutput{}
+	assert := assert.New(t)
+
+	const (
+		underlay int64 = iota
+		middle
+		overlay
+	)
+
+	exporter, err := makeTestExporter(mockHoneycomb,
+		WithField("a", underlay),
+		WithField("b", underlay))
+	assert.Nil(err)
+	assert.NotNil(exporter)
+
+	tr, err := setUpTestProvider(exporter,
+		sdktrace.WithResourceAttributes(
+			key.Int64("a", overlay),
+			key.Int64("c", overlay),
+		))
+
+	ctx, span := tr.Start(context.TODO(), "myTestSpan")
+	assert.Nil(err)
+	span.SetAttributes(
+		key.Int64("a", middle),
+		key.Int64("d", middle),
+	)
+	span.AddEvent(ctx, "something", key.Int64("c", middle))
+	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
+
+	span.End()
+
+	assert.Len(mockHoneycomb.Events(), 2)
+
+	mainEventFields := mockHoneycomb.Events()[1].Fields()
+	// TODO(seh): This assumes we preserve the original value type in the Honeycomb field.
+	assert.Equal(int64(overlay), mainEventFields["a"])
+	assert.Equal(int64(underlay), mainEventFields["b"])
+	assert.Equal(int64(overlay), mainEventFields["c"])
+	assert.Equal(int64(middle), mainEventFields["d"])
+
+	messageEventFields := mockHoneycomb.Events()[0].Fields()
+	assert.Equal(int64(overlay), messageEventFields["a"])
+	assert.Equal(int64(underlay), mainEventFields["b"])
+	assert.Equal(int64(overlay), mainEventFields["c"])
 }

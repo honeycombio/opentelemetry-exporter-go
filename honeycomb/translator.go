@@ -2,8 +2,9 @@ package honeycomb
 
 import (
 	"errors"
-	"google.golang.org/grpc/codes"
 	"time"
+
+	"google.golang.org/grpc/codes"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -175,15 +176,14 @@ func getStatusCode(span *tracepb.Span) codes.Code {
 }
 
 func getStatusMessage(span *tracepb.Span) string {
-	if span.Status != nil {
-		if span.Status.Message != "" {
-			return span.Status.Message
-		} else {
-			return codes.Code(span.Status.Code).String()
-		}
+	switch {
+	case span.Status == nil:
+		return codes.OK.String()
+	case span.Status.Message != "":
+		return span.Status.Message
+	default:
+		return codes.Code(span.Status.Code).String()
 	}
-
-	return codes.OK.String()
 }
 
 // OCProtoSpanToOTelSpanData converts an OC Span to an OTel SpanData.
