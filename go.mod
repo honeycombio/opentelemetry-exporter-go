@@ -7,7 +7,7 @@ require (
 	github.com/golang/protobuf v1.3.5
 	github.com/google/go-cmp v0.4.0
 	github.com/google/uuid v1.1.1
-	github.com/honeycombio/libhoney-go v1.12.3
+	github.com/honeycombio/libhoney-go v1.12.4
 	github.com/stretchr/testify v1.5.1
 	go.opentelemetry.io/otel v0.4.2
 	google.golang.org/grpc v1.27.1
