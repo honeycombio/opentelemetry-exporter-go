@@ -261,14 +261,25 @@ func CallingOnError(f func(error)) ExporterOption {
 	}
 }
 
-// WithDebugEnabled causes the exporter to emit verbose logging to STDOUT
+// WithDebug causes the exporter to emit verbose logging to STDOUT
 // if provided with a true argument, otherwise it has no effect.
 //
 // If you're having trouble getting the exporter to work, try enabling this
 // logging in a development environment to help diagnose the problem.
-func WithDebugEnabled(d bool) ExporterOption {
+func WithDebug(d bool) ExporterOption {
 	return func(c *exporterConfig) error {
 		c.debug = d
+		return nil
+	}
+}
+
+// WithDebugEnabled causes the exporter to emit verbose logging to STDOUT.
+//
+// If you're having trouble getting the exporter to work, try enabling this
+// logging in a development environment to help diagnose the problem.
+func WithDebugEnabled() ExporterOption {
+	return func(c *exporterConfig) error {
+		c.debug = true
 		return nil
 	}
 }
