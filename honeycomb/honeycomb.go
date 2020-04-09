@@ -423,6 +423,28 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	}, nil
 }
 
+// Consume from the response queue, calling the onError callback when errors
+// are encountered.
+//
+// This method will block until the passed context.Context is cancelled, or
+// until exporter.Close is called.
+func (e *Exporter) RunErrorLogger(ctx context.Context) {
+	responses := libhoney.TxResponses()
+	for {
+		select {
+		case r, ok := <-responses:
+			if !ok {
+				return
+			}
+			if r.Err != nil {
+				e.onError(r.Err)
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 // ExportSpan exports a SpanData to Honeycomb.
 func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	ev := e.builder.NewEvent()
