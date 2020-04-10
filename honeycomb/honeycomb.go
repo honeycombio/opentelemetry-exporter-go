@@ -432,11 +432,11 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	}, nil
 }
 
-// Consume from the response queue, calling the onError callback when errors
-// are encountered.
+// RunErrorLogger consumes from the response queue, calling the onError callback
+// when errors are encountered.
 //
-// This method will block until the passed context.Context is cancelled, or
-// until exporter.Close is called.
+// This method will block until the passed context.Context is canceled, or until
+// exporter.Close is called.
 func (e *Exporter) RunErrorLogger(ctx context.Context) {
 	responses := libhoney.TxResponses()
 	for {
