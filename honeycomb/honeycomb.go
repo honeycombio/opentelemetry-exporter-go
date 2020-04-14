@@ -539,10 +539,6 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 
 	ev.AddField("status.code", int32(data.StatusCode))
 	ev.AddField("status.message", data.StatusMessage)
-	// If the status isn't zero, set error to be true.
-	if data.StatusCode != codes.OK {
-		ev.AddField("error", true)
-	}
 
 	if err := ev.SendPresampled(); err != nil {
 		e.onError(err)
