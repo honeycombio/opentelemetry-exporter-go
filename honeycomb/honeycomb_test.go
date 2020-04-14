@@ -266,6 +266,9 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	msgEventParentID := msgEventFields["trace.parent_id"]
 	assert.Equal(spanID, msgEventParentID)
 
+	msgEventParentName := msgEventFields["trace.parent_name"]
+	assert.Equal("myTestSpan", msgEventParentName)
+
 	msgEventServiceName := msgEventFields["service_name"]
 	assert.Equal("opentelemetry-test", msgEventServiceName)
 
