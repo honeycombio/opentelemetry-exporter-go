@@ -578,17 +578,17 @@ func TestHoneycombOutputWithResource(t *testing.T) {
 
 	tr, err := setUpTestProvider(exporter,
 		sdktrace.WithResourceAttributes(
-			key.Int64("a", overlay),
-			key.Int64("c", overlay),
+			key.Int64("a", middle),
+			key.Int64("c", middle),
 		))
 
 	ctx, span := tr.Start(context.TODO(), "myTestSpan")
 	assert.Nil(err)
 	span.SetAttributes(
-		key.Int64("a", middle),
-		key.Int64("d", middle),
+		key.Int64("a", overlay),
+		key.Int64("d", overlay),
 	)
-	span.AddEvent(ctx, "something", key.Int64("c", middle))
+	span.AddEvent(ctx, "something", key.Int64("c", overlay))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()
@@ -596,14 +596,13 @@ func TestHoneycombOutputWithResource(t *testing.T) {
 	assert.Len(mockHoneycomb.Events(), 2)
 
 	mainEventFields := mockHoneycomb.Events()[1].Fields()
-	// TODO(seh): This assumes we preserve the original value type in the Honeycomb field.
 	assert.Equal(int64(overlay), mainEventFields["a"])
 	assert.Equal(int64(underlay), mainEventFields["b"])
-	assert.Equal(int64(overlay), mainEventFields["c"])
-	assert.Equal(int64(middle), mainEventFields["d"])
+	assert.Equal(int64(middle), mainEventFields["c"])
+	assert.Equal(int64(overlay), mainEventFields["d"])
 
 	messageEventFields := mockHoneycomb.Events()[0].Fields()
-	assert.Equal(int64(overlay), messageEventFields["a"])
+	assert.Equal(int64(middle), messageEventFields["a"])
 	assert.Equal(int64(underlay), mainEventFields["b"])
-	assert.Equal(int64(overlay), mainEventFields["c"])
+	assert.Equal(int64(middle), mainEventFields["c"])
 }

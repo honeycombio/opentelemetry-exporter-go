@@ -432,11 +432,11 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	}, nil
 }
 
-// Consume from the response queue, calling the onError callback when errors
-// are encountered.
+// RunErrorLogger consumes from the response queue, calling the onError callback
+// when errors are encountered.
 //
-// This method will block until the passed context.Context is cancelled, or
-// until exporter.Close is called.
+// This method will block until the passed context.Context is canceled, or until
+// exporter.Close is called.
 func (e *Exporter) RunErrorLogger(ctx context.Context) {
 	responses := libhoney.TxResponses()
 	for {
@@ -458,13 +458,6 @@ func (e *Exporter) RunErrorLogger(ctx context.Context) {
 func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	ev := e.builder.NewEvent()
 
-	if len(e.serviceName) != 0 {
-		ev.AddField("service_name", e.serviceName)
-	}
-
-	ev.Timestamp = data.StartTime
-	ev.Add(honeycombSpan(data))
-
 	applyResourceAttributes := func(ev *libhoney.Event) {
 		if data.Resource != nil {
 			for _, kv := range data.Resource.Attributes() {
@@ -473,9 +466,22 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		}
 	}
 
+	// Treat resource-defined attributes as underlays, with any same-keyed span attributes taking
+	// precedence. Apply them first.
+	applyResourceAttributes(ev)
+	if len(e.serviceName) != 0 {
+		ev.AddField("service_name", e.serviceName)
+	}
+
+	ev.Timestamp = data.StartTime
+	ev.Add(honeycombSpan(data))
+
 	// We send these message events as zero-duration spans.
 	for _, a := range data.MessageEvents {
 		spanEv := e.builder.NewEvent()
+		// Treat resource-defined attributes as underlays, with any same-keyed message event
+		// attributes taking precedence. Apply them first.
+		applyResourceAttributes(spanEv)
 		if len(e.serviceName) != 0 {
 			spanEv.AddField("service_name", e.serviceName)
 		}
@@ -483,9 +489,6 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		for _, kv := range a.Attributes {
 			spanEv.AddField(string(kv.Key), kv.Value.AsInterface())
 		}
-		// Treat resource-defined attributes as overlays, taking precedent over any same-keyed
-		// message event attributes. Apply them last.
-		applyResourceAttributes(spanEv)
 		spanEv.Timestamp = a.Time
 
 		spanEv.Add(spanEvent{
@@ -533,9 +536,6 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	for _, kv := range data.Attributes {
 		ev.AddField(string(kv.Key), kv.Value.AsInterface())
 	}
-	// Treat resource-defined attributes as overlays, taking precedent over any same-keyed span
-	// attributes. Apply them last.
-	applyResourceAttributes(ev)
 
 	ev.AddField("status.code", int32(data.StatusCode))
 	ev.AddField("status.message", data.StatusMessage)
