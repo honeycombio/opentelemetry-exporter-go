@@ -5,14 +5,17 @@ import (
 	"testing"
 	"time"
 
+	resourcepb "github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1"
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"google.golang.org/grpc/codes"
 )
 
@@ -100,6 +103,12 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 		Status:                  &tracepb.Status{Code: int32(codes.Unknown), Message: "status message"},
 		SameProcessAsParentSpan: &wrappers.BoolValue{Value: false},
 		ChildSpanCount:          &wrappers.UInt32Value{Value: 5},
+		Resource: &resourcepb.Resource{
+			Type: "host",
+			Labels: map[string]string{
+				"host.name": "xanadu",
+			},
+		},
 	}
 
 	want := &trace.SpanData{
@@ -110,16 +119,16 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 		StartTime:    time.Unix(start.Unix(), int64(start.Nanosecond())),
 		EndTime:      time.Unix(end.Unix(), int64(end.Nanosecond())),
 		Attributes: []core.KeyValue{
-			core.Key("some-string").String("some-value"),
-			core.Key("some-double").Float64(math.Pi),
-			core.Key("some-int").Int(42),
-			core.Key("some-boolean").Bool(true),
+			key.String("some-string", "some-value"),
+			key.Float64("some-double", math.Pi),
+			key.Int("some-int", 42),
+			key.Bool("some-boolean", true),
 		},
 		Links: []apitrace.Link{
 			{
 				SpanContext: spanContext([]byte{0x04}, []byte{0x05}),
 				Attributes: []core.KeyValue{
-					core.Key("e").Float64(math.E),
+					key.Float64("e", math.E),
 				},
 			},
 		},
@@ -128,7 +137,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 				Name: "test-event",
 				Time: time.Unix(annotationTime.Unix(), int64(annotationTime.Nanosecond())),
 				Attributes: []core.KeyValue{
-					core.Key("annotation-attr").String("annotation-val"),
+					key.String("annotation-attr", "annotation-val"),
 				},
 			},
 		},
@@ -137,6 +146,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 		HasRemoteParent:  true,
 		DroppedLinkCount: 2,
 		ChildSpanCount:   5,
+		Resource:         resource.New(key.String("host.name", "xanadu")),
 	}
 
 	got, err := OCProtoSpanToOTelSpanData(&span)

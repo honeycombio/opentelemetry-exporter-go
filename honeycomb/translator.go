@@ -4,11 +4,13 @@ import (
 	"errors"
 	"time"
 
+	"go.opentelemetry.io/otel/sdk/resource"
 	"google.golang.org/grpc/codes"
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/key"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
@@ -49,6 +51,19 @@ func spanContext(traceID []byte, spanID []byte) core.SpanContext {
 		copy(ctx.SpanID[:], spanID[:])
 	}
 	return ctx
+}
+
+func spanResource(span *tracepb.Span) *resource.Resource {
+	if span.Resource == nil {
+		return nil
+	}
+	attrs := make([]core.KeyValue, len(span.Resource.Labels))
+	i := 0
+	for k, v := range span.Resource.Labels {
+		attrs[i] = key.String(k, v)
+		i++
+	}
+	return resource.New(attrs...)
 }
 
 // Create []core.KeyValue attributes from an OC *Span_Attributes
@@ -209,6 +224,7 @@ func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
 	spanData.HasRemoteParent = getHasRemoteParent(span)
 	spanData.DroppedLinkCount = getDroppedLinkCount(span.GetLinks())
 	spanData.ChildSpanCount = getChildSpanCount(span)
+	spanData.Resource = spanResource(span)
 
 	return spanData, nil
 }
