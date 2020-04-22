@@ -229,47 +229,50 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Len(mockHoneycomb.Events(), 2)
 
 	// Check the fields on the main span event.
-	messageEventFields := mockHoneycomb.Events()[1].Fields()
-	traceID := messageEventFields["trace.trace_id"]
+	mainEventFields := mockHoneycomb.Events()[1].Fields()
+	traceID := mainEventFields["trace.trace_id"]
 	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceIDString())
 	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
-	spanID := messageEventFields["trace.span_id"]
+	spanID := mainEventFields["trace.span_id"]
 	expectedSpanID := span.SpanContext().SpanIDString()
 	assert.Equal(expectedSpanID, spanID)
 
-	name := messageEventFields["name"]
+	name := mainEventFields["name"]
 	assert.Equal("myTestSpan", name)
 
-	durationMilli := messageEventFields["duration_ms"]
+	durationMilli := mainEventFields["duration_ms"]
 	durationMilliFl, ok := durationMilli.(float64)
 	assert.True(ok)
 	assert.Greater(durationMilliFl, 0.0)
 
-	serviceName := messageEventFields["service_name"]
+	serviceName := mainEventFields["service_name"]
 	assert.Equal("opentelemetry-test", serviceName)
 	assert.Equal(mockHoneycomb.Events()[1].Dataset, "test")
 
 	// Check the fields on the zero-duration Message event.
-	mainEventFields := mockHoneycomb.Events()[0].Fields()
-	msgEventName := mainEventFields["name"]
+	msgEventFields := mockHoneycomb.Events()[0].Fields()
+	msgEventName := msgEventFields["name"]
 	assert.Equal("handling this...", msgEventName)
 
-	attribute := mainEventFields["request-handled"]
+	attribute := msgEventFields["request-handled"]
 	assert.Equal(int64(100), attribute)
 
-	msgEventTraceID := mainEventFields["trace.trace_id"]
+	msgEventTraceID := msgEventFields["trace.trace_id"]
 	assert.Equal(honeycombTranslatedTraceID, msgEventTraceID)
 
-	msgEventParentID := mainEventFields["trace.parent_id"]
+	msgEventParentID := msgEventFields["trace.parent_id"]
 	assert.Equal(spanID, msgEventParentID)
 
-	msgEventServiceName := mainEventFields["service_name"]
+	msgEventParentName := msgEventFields["trace.parent_name"]
+	assert.Equal("myTestSpan", msgEventParentName)
+
+	msgEventServiceName := msgEventFields["service_name"]
 	assert.Equal("opentelemetry-test", msgEventServiceName)
 
-	spanEvent := mainEventFields["meta.span_type"]
+	spanEvent := msgEventFields["meta.span_type"]
 	assert.Equal("span_event", spanEvent)
 }
 

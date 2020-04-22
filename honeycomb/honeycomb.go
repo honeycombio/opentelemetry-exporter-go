@@ -308,10 +308,11 @@ var _ trace.SpanSyncer = (*Exporter)(nil)
 
 // spanEvent represents an event attached to a specific span.
 type spanEvent struct {
-	Name     string `json:"name"`
-	TraceID  string `json:"trace.trace_id"`
-	ParentID string `json:"trace.parent_id,omitempty"`
-	SpanType string `json:"meta.span_type"`
+	Name       string `json:"name"`
+	TraceID    string `json:"trace.trace_id"`
+	ParentID   string `json:"trace.parent_id,omitempty"`
+	ParentName string `json:"trace.parent_name,omitempty"`
+	SpanType   string `json:"meta.span_type"`
 }
 
 type spanRefType int64
@@ -492,10 +493,11 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		spanEv.Timestamp = a.Time
 
 		spanEv.Add(spanEvent{
-			Name:     a.Name,
-			TraceID:  getHoneycombTraceID(data.SpanContext.TraceIDString()),
-			ParentID: data.SpanContext.SpanIDString(),
-			SpanType: "span_event",
+			Name:       a.Name,
+			TraceID:    getHoneycombTraceID(data.SpanContext.TraceIDString()),
+			ParentID:   data.SpanContext.SpanIDString(),
+			ParentName: data.Name,
+			SpanType:   "span_event",
 		})
 		if err := spanEv.Send(); err != nil {
 			e.onError(err)
@@ -539,10 +541,6 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 
 	ev.AddField("status.code", int32(data.StatusCode))
 	ev.AddField("status.message", data.StatusMessage)
-	// If the status isn't zero, set error to be true.
-	if data.StatusCode != codes.OK {
-		ev.AddField("error", true)
-	}
 
 	if err := ev.SendPresampled(); err != nil {
 		e.onError(err)
