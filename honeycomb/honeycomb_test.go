@@ -180,13 +180,13 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Len(mockHoneycomb.Events(), 1)
 	mainEventFields := mockHoneycomb.Events()[0].Fields()
 	traceID := mainEventFields["trace.trace_id"]
-	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceIDString())
+	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceID.String())
 	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
 	spanID := mainEventFields["trace.span_id"]
-	expectedSpanID := span.SpanContext().SpanIDString()
+	expectedSpanID := span.SpanContext().SpanID.String()
 	assert.Equal(expectedSpanID, spanID)
 
 	name := mainEventFields["name"]
@@ -231,13 +231,13 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	// Check the fields on the main span event.
 	mainEventFields := mockHoneycomb.Events()[1].Fields()
 	traceID := mainEventFields["trace.trace_id"]
-	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceIDString())
+	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceID.String())
 	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
 	spanID := mainEventFields["trace.span_id"]
-	expectedSpanID := span.SpanContext().SpanIDString()
+	expectedSpanID := span.SpanContext().SpanID.String()
 	assert.Equal(expectedSpanID, spanID)
 
 	name := mainEventFields["name"]
@@ -299,7 +299,7 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	linkFields := mockHoneycomb.Events()[0].Fields()
 	mainEventFields := mockHoneycomb.Events()[1].Fields()
 	traceID := linkFields["trace.trace_id"]
-	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceIDString())
+	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceID.String())
 	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)

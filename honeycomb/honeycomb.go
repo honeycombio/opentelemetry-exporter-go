@@ -346,8 +346,8 @@ func honeycombSpan(s *trace.SpanData) *span {
 	sc := s.SpanContext
 
 	hcSpan := &span{
-		TraceID:         getHoneycombTraceID(sc.TraceIDString()),
-		ID:              sc.SpanIDString(),
+		TraceID:         getHoneycombTraceID(sc.TraceID.String()),
+		ID:              sc.SpanID.String(),
 		Name:            s.Name,
 		HasRemoteParent: s.HasRemoteParent,
 	}
@@ -494,8 +494,8 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 
 		spanEv.Add(spanEvent{
 			Name:       a.Name,
-			TraceID:    getHoneycombTraceID(data.SpanContext.TraceIDString()),
-			ParentID:   data.SpanContext.SpanIDString(),
+			TraceID:    getHoneycombTraceID(data.SpanContext.TraceID.String()),
+			ParentID:   data.SpanContext.SpanID.String(),
 			ParentName: data.Name,
 			SpanType:   "span_event",
 		})
@@ -519,10 +519,10 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	for _, spanLink := range data.Links {
 		linkEv := e.builder.NewEvent()
 		linkEv.Add(link{
-			TraceID:     getHoneycombTraceID(data.SpanContext.TraceIDString()),
-			ParentID:    data.SpanContext.SpanIDString(),
-			LinkTraceID: getHoneycombTraceID(spanLink.TraceIDString()),
-			LinkSpanID:  spanLink.SpanIDString(),
+			TraceID:     getHoneycombTraceID(data.SpanContext.TraceID.String()),
+			ParentID:    data.SpanContext.SpanID.String(),
+			LinkTraceID: getHoneycombTraceID(spanLink.TraceID.String()),
+			LinkSpanID:  spanLink.SpanID.String(),
 			SpanType:    "link",
 			// TODO(akvanhar): properly set the reference type when specs are defined
 			// see https://github.com/open-telemetry/opentelemetry-specification/issues/65
