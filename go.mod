@@ -9,6 +9,6 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/honeycombio/libhoney-go v1.12.4
 	github.com/stretchr/testify v1.5.1
-	go.opentelemetry.io/otel v0.4.2
+	go.opentelemetry.io/otel v0.4.3
 	google.golang.org/grpc v1.27.1
 )
