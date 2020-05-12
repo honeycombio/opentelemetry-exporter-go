@@ -349,6 +349,13 @@ type span struct {
 //
 // [1]: https://github.com/jaegertracing/jaeger/blob/cd19b64413eca0f06b61d92fe29bebce1321d0b0/model/ids.go#L81
 func getHoneycombTraceID(traceID []byte) string {
+	// binary.BigEndian.Uint64() does a bounds check on traceID which will
+	// cause a panic if traceID is fewer than 8 bytes. In this case, we don't
+	// need to check for zero padding on the high part anyway, so just return a
+	// hex string.
+	if len(traceID) < traceIDShortLength {
+		return fmt.Sprintf("%x", traceID)
+	}
 	var low uint64
 	if len(traceID) == traceIDLongLength {
 		low = binary.BigEndian.Uint64(traceID[traceIDShortLength:])
