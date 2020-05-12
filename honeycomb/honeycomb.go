@@ -323,8 +323,8 @@ const (
 )
 
 const (
-	traceIdShortLength = 8
-	traceIdLongLength  = 16
+	traceIDShortLength = 8
+	traceIDLongLength  = 16
 )
 
 // span is the format of trace events that Honeycomb accepts.
@@ -339,29 +339,27 @@ type span struct {
 	HasRemoteParent bool    `json:"has_remote_parent"`
 }
 
-// getHoneycombTraceID returns a trace_id suitable for use in honeycomb. Before
+// getHoneycombTraceID returns a trace ID suitable for use in honeycomb. Before
 // encoding the bytes as a hex string, we want to handle cases where we are
-// given 128 bit ids with zero padding, e.g. 0000000000000000f798a1e7f33c8af6.
+// given 128-bit IDs with zero padding, e.g. 0000000000000000f798a1e7f33c8af6.
 // To do this, we borrow a strategy from Jaeger [1] wherein we split the byte
 // sequence into two parts. The leftmost part could contain all zeros. We use
-// that to determine whether to return a 64 bit hex encoded string or a 128 bit
+// that to determine whether to return a 64-bit hex encoded string or a 128-bit
 // one.
 //
 // [1]: https://github.com/jaegertracing/jaeger/blob/cd19b64413eca0f06b61d92fe29bebce1321d0b0/model/ids.go#L81
 func getHoneycombTraceID(traceID []byte) string {
-	var high, low uint64
-	if len(traceID) == traceIdLongLength {
-		high = binary.BigEndian.Uint64(traceID[:traceIdShortLength])
-		low = binary.BigEndian.Uint64(traceID[traceIdShortLength:])
+	var low uint64
+	if len(traceID) == traceIDLongLength {
+		low = binary.BigEndian.Uint64(traceID[traceIDShortLength:])
+		if high := binary.BigEndian.Uint64(traceID[:traceIDShortLength]); high != 0 {
+			return fmt.Sprintf("%016x%016x", high, low)
+		}
 	} else {
 		low = binary.BigEndian.Uint64(traceID)
 	}
 
-	if high == 0 {
-		return fmt.Sprintf("%016x", low)
-	}
-
-	return fmt.Sprintf("%016x%016x", high, low)
+	return fmt.Sprintf("%016x", low)
 }
 
 func honeycombSpan(s *trace.SpanData) *span {
