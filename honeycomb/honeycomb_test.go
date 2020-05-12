@@ -31,22 +31,22 @@ func TestGetHoneycombTraceID(t *testing.T) {
 			want: "cbe4decd12429177",
 		},
 		{
-			name: "128-bit zero padded traceID",
+			name: "128-bit zero-padded traceID",
 			traceID: "0000000000000000cbe4decd12429177",
 			want: "cbe4decd12429177",
 		},
 		{
-			name: "128-bit non-zero padded traceID",
+			name: "128-bit non-zero-padded traceID",
 			traceID: "f23b42eac289a0fdcde48fcbe3ab1a32",
 			want: "f23b42eac289a0fdcde48fcbe3ab1a32",
 		},
 		{
-			name: "Non hex traceID",
+			name: "Non-hex traceID",
 			traceID: "foobar1",
 			want: "666f6f62617231",
 		},
 		{
-			name: "Longer non hex traceID",
+			name: "Longer non-hex traceID",
 			traceID: "foobarbaz",
 			want: "666f6f6261726261",
 		},
@@ -54,14 +54,13 @@ func TestGetHoneycombTraceID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var traceID []byte
 			traceID, err := hex.DecodeString(tt.traceID)
 			if err != nil {
 				traceID = []byte(tt.traceID)
 			}
 			got := getHoneycombTraceID(traceID)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getHoneycombTraceID:\n\tgot  %#v\n\twant %#v", got, tt.want)
+				t.Errorf("getHoneycombTraceID:\n\tgot:  %#v\n\twant: %#v", got, tt.want)
 			}
 		})
 	}
