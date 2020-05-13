@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
@@ -21,12 +19,59 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+func TestGetHoneycombTraceID(t *testing.T) {
+	tests := []struct{
+		name string
+		traceID string
+		want string
+	}{
+		{
+			name: "64-bit traceID",
+			traceID: "cbe4decd12429177",
+			want: "cbe4decd12429177",
+		},
+		{
+			name: "128-bit zero-padded traceID",
+			traceID: "0000000000000000cbe4decd12429177",
+			want: "cbe4decd12429177",
+		},
+		{
+			name: "128-bit non-zero-padded traceID",
+			traceID: "f23b42eac289a0fdcde48fcbe3ab1a32",
+			want: "f23b42eac289a0fdcde48fcbe3ab1a32",
+		},
+		{
+			name: "Non-hex traceID",
+			traceID: "foobar1",
+			want: "666f6f62617231",
+		},
+		{
+			name: "Longer non-hex traceID",
+			traceID: "foobarbaz",
+			want: "666f6f6261726261",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			traceID, err := hex.DecodeString(tt.traceID)
+			if err != nil {
+				traceID = []byte(tt.traceID)
+			}
+			got := getHoneycombTraceID(traceID)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getHoneycombTraceID:\n\tgot:  %#v\n\twant: %#v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestExport(t *testing.T) {
 	now := time.Now().Round(time.Microsecond)
 	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := core.SpanIDFromHex("0102030405060708")
 
-	expectedTraceID := "01020304-0506-0708-090a-0b0c0d0e0f10"
+	expectedTraceID := "0102030405060708090a0b0c0d0e0f10"
 	expectedSpanID := "0102030405060708"
 
 	tests := []struct {
@@ -180,10 +225,10 @@ func TestHoneycombOutput(t *testing.T) {
 	assert.Len(mockHoneycomb.Events(), 1)
 	mainEventFields := mockHoneycomb.Events()[0].Fields()
 	traceID := mainEventFields["trace.trace_id"]
-	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceID.String())
-	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
+	spanTraceID := span.SpanContext().TraceID
+	honeycombTranslated := getHoneycombTraceID(spanTraceID[:])
 
-	assert.Equal(honeycombTranslatedTraceID, traceID)
+	assert.Equal(honeycombTranslated, traceID)
 
 	spanID := mainEventFields["trace.span_id"]
 	expectedSpanID := span.SpanContext().SpanID.String()
@@ -231,8 +276,8 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	// Check the fields on the main span event.
 	mainEventFields := mockHoneycomb.Events()[1].Fields()
 	traceID := mainEventFields["trace.trace_id"]
-	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceID.String())
-	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
+	spanTraceID := span.SpanContext().TraceID
+	honeycombTranslatedTraceID := getHoneycombTraceID(spanTraceID[:])
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
@@ -299,16 +344,17 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	linkFields := mockHoneycomb.Events()[0].Fields()
 	mainEventFields := mockHoneycomb.Events()[1].Fields()
 	traceID := linkFields["trace.trace_id"]
-	honeycombTranslatedTraceUUID, _ := uuid.Parse(span.SpanContext().TraceID.String())
-	honeycombTranslatedTraceID := honeycombTranslatedTraceUUID.String()
+	spanContextTraceID := span.SpanContext().TraceID
+	honeycombTranslatedTraceID := getHoneycombTraceID(spanContextTraceID[:])
 
 	assert.Equal(honeycombTranslatedTraceID, traceID)
 
 	linkParentID := linkFields["trace.parent_id"]
 	assert.Equal(mainEventFields["trace.span_id"], linkParentID)
+
 	hclinkTraceID := linkFields["trace.link.trace_id"]
-	linkTraceIDString := hex.EncodeToString(linkTraceID[:])
-	assert.Equal(getHoneycombTraceID(linkTraceIDString), hclinkTraceID)
+	assert.Equal(getHoneycombTraceID(linkTraceID[:]), hclinkTraceID)
+
 	hclinkSpanID := linkFields["trace.link.span_id"]
 	assert.Equal("0102030405060709", hclinkSpanID)
 	linkSpanType := linkFields["meta.span_type"]

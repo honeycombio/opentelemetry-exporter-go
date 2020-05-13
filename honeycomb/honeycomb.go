@@ -17,13 +17,13 @@ package honeycomb
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
 	"time"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
@@ -322,6 +322,11 @@ const (
 	spanRefTypeFollowsFrom spanRefType = 1
 )
 
+const (
+	traceIDShortLength = 8
+	traceIDLongLength  = 16
+)
+
 // span is the format of trace events that Honeycomb accepts.
 type span struct {
 	TraceID         string  `json:"trace.trace_id"`
@@ -334,19 +339,41 @@ type span struct {
 	HasRemoteParent bool    `json:"has_remote_parent"`
 }
 
-func getHoneycombTraceID(traceID string) string {
-	hcTraceUUID, err := uuid.Parse(traceID)
-	if err != nil {
-		return ""
+// getHoneycombTraceID returns a trace ID suitable for use in honeycomb. Before
+// encoding the bytes as a hex string, we want to handle cases where we are
+// given 128-bit IDs with zero padding, e.g. 0000000000000000f798a1e7f33c8af6.
+// To do this, we borrow a strategy from Jaeger [1] wherein we split the byte
+// sequence into two parts. The leftmost part could contain all zeros. We use
+// that to determine whether to return a 64-bit hex encoded string or a 128-bit
+// one.
+//
+// [1]: https://github.com/jaegertracing/jaeger/blob/cd19b64413eca0f06b61d92fe29bebce1321d0b0/model/ids.go#L81
+func getHoneycombTraceID(traceID []byte) string {
+	// binary.BigEndian.Uint64() does a bounds check on traceID which will
+	// cause a panic if traceID is fewer than 8 bytes. In this case, we don't
+	// need to check for zero padding on the high part anyway, so just return a
+	// hex string.
+	if len(traceID) < traceIDShortLength {
+		return fmt.Sprintf("%x", traceID)
 	}
-	return hcTraceUUID.String()
+	var low uint64
+	if len(traceID) == traceIDLongLength {
+		low = binary.BigEndian.Uint64(traceID[traceIDShortLength:])
+		if high := binary.BigEndian.Uint64(traceID[:traceIDShortLength]); high != 0 {
+			return fmt.Sprintf("%016x%016x", high, low)
+		}
+	} else {
+		low = binary.BigEndian.Uint64(traceID)
+	}
+
+	return fmt.Sprintf("%016x", low)
 }
 
 func honeycombSpan(s *trace.SpanData) *span {
 	sc := s.SpanContext
 
 	hcSpan := &span{
-		TraceID:         getHoneycombTraceID(sc.TraceID.String()),
+		TraceID:         getHoneycombTraceID(sc.TraceID[:]),
 		ID:              sc.SpanID.String(),
 		Name:            s.Name,
 		HasRemoteParent: s.HasRemoteParent,
@@ -494,7 +521,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 
 		spanEv.Add(spanEvent{
 			Name:       a.Name,
-			TraceID:    getHoneycombTraceID(data.SpanContext.TraceID.String()),
+			TraceID:    getHoneycombTraceID(data.SpanContext.TraceID[:]),
 			ParentID:   data.SpanContext.SpanID.String(),
 			ParentName: data.Name,
 			SpanType:   "span_event",
@@ -519,9 +546,9 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	for _, spanLink := range data.Links {
 		linkEv := e.builder.NewEvent()
 		linkEv.Add(link{
-			TraceID:     getHoneycombTraceID(data.SpanContext.TraceID.String()),
+			TraceID:     getHoneycombTraceID(data.SpanContext.TraceID[:]),
 			ParentID:    data.SpanContext.SpanID.String(),
-			LinkTraceID: getHoneycombTraceID(spanLink.TraceID.String()),
+			LinkTraceID: getHoneycombTraceID(spanLink.TraceID[:]),
 			LinkSpanID:  spanLink.SpanID.String(),
 			SpanType:    "link",
 			// TODO(akvanhar): properly set the reference type when specs are defined
