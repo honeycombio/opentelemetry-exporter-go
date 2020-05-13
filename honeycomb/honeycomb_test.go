@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
 	"google.golang.org/grpc/codes"
@@ -68,8 +67,8 @@ func TestGetHoneycombTraceID(t *testing.T) {
 
 func TestExport(t *testing.T) {
 	now := time.Now().Round(time.Microsecond)
-	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID, _ := core.SpanIDFromHex("0102030405060708")
+	traceID, _ := apitrace.IDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := apitrace.SpanIDFromHex("0102030405060708")
 
 	expectedTraceID := "0102030405060708090a0b0c0d0e0f10"
 	expectedSpanID := "0102030405060708"
@@ -82,7 +81,7 @@ func TestExport(t *testing.T) {
 		{
 			name: "no parent",
 			data: &exporttrace.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -101,7 +100,7 @@ func TestExport(t *testing.T) {
 		{
 			name: "1 day duration",
 			data: &exporttrace.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -120,7 +119,7 @@ func TestExport(t *testing.T) {
 		{
 			name: "status code OK",
 			data: &exporttrace.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -140,7 +139,7 @@ func TestExport(t *testing.T) {
 		{
 			name: "status code not OK",
 			data: &exporttrace.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -322,8 +321,8 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 }
 
 func TestHoneycombOutputWithLinks(t *testing.T) {
-	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
-	linkSpanID, _ := core.SpanIDFromHex("0102030405060709")
+	linkTraceID, _ := apitrace.IDFromHex("0102030405060709090a0b0c0d0e0f11")
+	linkSpanID, _ := apitrace.SpanIDFromHex("0102030405060709")
 
 	mockHoneycomb := &libhoney.MockOutput{}
 	assert := assert.New(t)
@@ -331,7 +330,7 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Nil(err)
 
-	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.LinkedTo(core.SpanContext{
+	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.LinkedTo(apitrace.SpanContext{
 		TraceID: linkTraceID,
 		SpanID:  linkSpanID,
 	}))

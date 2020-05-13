@@ -42,8 +42,8 @@ func oTelSpanKind(kind tracepb.Span_SpanKind) apitrace.SpanKind {
 // Creates an OpenTelemetry SpanContext from information in an OC Span.
 // Note that the OC Span has no equivalent to TraceFlags field in the
 // OpenTelemetry SpanContext type.
-func spanContext(traceID []byte, spanID []byte) core.SpanContext {
-	ctx := core.SpanContext{}
+func spanContext(traceID []byte, spanID []byte) apitrace.SpanContext {
+	ctx := apitrace.SpanContext{}
 	if traceID != nil {
 		copy(ctx.TraceID[:], traceID[:])
 	}

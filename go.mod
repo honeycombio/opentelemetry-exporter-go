@@ -10,7 +10,7 @@ require (
 	github.com/honeycombio/libhoney-go v1.12.4
 	github.com/klauspost/compress v1.10.5 // indirect
 	github.com/stretchr/testify v1.5.1
-	go.opentelemetry.io/otel v0.4.3
+	go.opentelemetry.io/otel v0.4.4-0.20200505175019-796c3769835b
 	golang.org/x/net v0.0.0-20200505041828-1ed23360d12c // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/grpc v1.29.1

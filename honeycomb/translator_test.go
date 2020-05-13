@@ -113,7 +113,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 
 	want := &trace.SpanData{
 		SpanContext:  spanContext([]byte{0x02}, []byte{0x03}),
-		ParentSpanID: core.SpanID{0x01},
+		ParentSpanID: apitrace.SpanID{0x01},
 		SpanKind:     apitrace.SpanKindClient,
 		Name:         "trace-name",
 		StartTime:    time.Unix(start.Unix(), int64(start.Nanosecond())),
