@@ -8,9 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
@@ -68,8 +67,8 @@ func TestGetHoneycombTraceID(t *testing.T) {
 
 func TestExport(t *testing.T) {
 	now := time.Now().Round(time.Microsecond)
-	traceID, _ := core.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
-	spanID, _ := core.SpanIDFromHex("0102030405060708")
+	traceID, _ := apitrace.IDFromHex("0102030405060708090a0b0c0d0e0f10")
+	spanID, _ := apitrace.SpanIDFromHex("0102030405060708")
 
 	expectedTraceID := "0102030405060708090a0b0c0d0e0f10"
 	expectedSpanID := "0102030405060708"
@@ -82,7 +81,7 @@ func TestExport(t *testing.T) {
 		{
 			name: "no parent",
 			data: &exporttrace.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -101,7 +100,7 @@ func TestExport(t *testing.T) {
 		{
 			name: "1 day duration",
 			data: &exporttrace.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -120,7 +119,7 @@ func TestExport(t *testing.T) {
 		{
 			name: "status code OK",
 			data: &exporttrace.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -140,7 +139,7 @@ func TestExport(t *testing.T) {
 		{
 			name: "status code not OK",
 			data: &exporttrace.SpanData{
-				SpanContext: core.SpanContext{
+				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
@@ -212,11 +211,11 @@ func TestHoneycombOutput(t *testing.T) {
 	_, span := tr.Start(context.TODO(), "myTestSpan")
 	var nilString string
 	span.SetAttributes(
-		key.String("ex.com/string", "yes"),
-		key.Bool("ex.com/bool", true),
-		key.Int64("ex.com/int64", 42),
-		key.Float64("ex.com/float64", 3.14),
-		key.String("ex.com/nil", nilString),
+		kv.String("ex.com/string", "yes"),
+		kv.Bool("ex.com/bool", true),
+		kv.Int64("ex.com/int64", 42),
+		kv.Float64("ex.com/float64", 3.14),
+		kv.String("ex.com/nil", nilString),
 	)
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
@@ -266,7 +265,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Nil(err)
 
 	ctx, span := tr.Start(context.TODO(), "myTestSpan")
-	span.AddEvent(ctx, "handling this...", key.Int("request-handled", 100))
+	span.AddEvent(ctx, "handling this...", kv.Int("request-handled", 100))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()
@@ -322,8 +321,8 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 }
 
 func TestHoneycombOutputWithLinks(t *testing.T) {
-	linkTraceID, _ := core.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
-	linkSpanID, _ := core.SpanIDFromHex("0102030405060709")
+	linkTraceID, _ := apitrace.IDFromHex("0102030405060709090a0b0c0d0e0f11")
+	linkSpanID, _ := apitrace.SpanIDFromHex("0102030405060709")
 
 	mockHoneycomb := &libhoney.MockOutput{}
 	assert := assert.New(t)
@@ -331,7 +330,7 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Nil(err)
 
-	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.LinkedTo(core.SpanContext{
+	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.LinkedTo(apitrace.SpanContext{
 		TraceID: linkTraceID,
 		SpanID:  linkSpanID,
 	}))
@@ -522,7 +521,7 @@ func TestHoneycombOutputWithStaticFields(t *testing.T) {
 
 	_, span := tr.Start(context.TODO(), "myTestSpan")
 	span.SetAttributes(
-		key.String("ex.com/string", "yes"),
+		kv.String("ex.com/string", "yes"),
 	)
 
 	span.End()
@@ -557,7 +556,7 @@ func TestHoneycombOutputWithDynamicFields(t *testing.T) {
 
 	_, span := tr.Start(context.TODO(), "myTestSpan")
 	span.SetAttributes(
-		key.String("ex.com/string", "yes"),
+		kv.String("ex.com/string", "yes"),
 	)
 
 	span.End()
@@ -595,7 +594,7 @@ func TestHoneycombOutputWithStaticAndDynamicFields(t *testing.T) {
 
 	_, span := tr.Start(context.TODO(), "myTestSpan")
 	span.SetAttributes(
-		key.String("ex.com/string", "yes"),
+		kv.String("ex.com/string", "yes"),
 	)
 
 	span.End()
@@ -627,17 +626,17 @@ func TestHoneycombOutputWithResource(t *testing.T) {
 
 	tr, err := setUpTestProvider(exporter,
 		sdktrace.WithResourceAttributes(
-			key.Int64("a", middle),
-			key.Int64("c", middle),
+			kv.Int64("a", middle),
+			kv.Int64("c", middle),
 		))
 
 	ctx, span := tr.Start(context.TODO(), "myTestSpan")
 	assert.Nil(err)
 	span.SetAttributes(
-		key.Int64("a", overlay),
-		key.Int64("d", overlay),
+		kv.Int64("a", overlay),
+		kv.Int64("d", overlay),
 	)
-	span.AddEvent(ctx, "something", key.Int64("c", overlay))
+	span.AddEvent(ctx, "something", kv.Int64("c", overlay))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()

@@ -23,7 +23,7 @@ import (
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 
 	"go.opentelemetry.io/otel/plugin/httptrace"
@@ -77,8 +77,8 @@ func main() {
 		)
 		defer span.End()
 
-		span.SetAttributes(key.String("ex.com/another", "yes"))
-		span.AddEvent(ctx, "handling this...", key.Int("request-handled", 100))
+		span.SetAttributes(kv.String("ex.com/another", "yes"))
+		span.AddEvent(ctx, "handling this...", kv.Int("request-handled", 100))
 
 		_, _ = io.WriteString(w, "Hello, world!\n")
 	}

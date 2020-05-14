@@ -11,8 +11,8 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/kv/value"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -113,22 +113,22 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 
 	want := &trace.SpanData{
 		SpanContext:  spanContext([]byte{0x02}, []byte{0x03}),
-		ParentSpanID: core.SpanID{0x01},
+		ParentSpanID: apitrace.SpanID{0x01},
 		SpanKind:     apitrace.SpanKindClient,
 		Name:         "trace-name",
 		StartTime:    time.Unix(start.Unix(), int64(start.Nanosecond())),
 		EndTime:      time.Unix(end.Unix(), int64(end.Nanosecond())),
-		Attributes: []core.KeyValue{
-			key.String("some-string", "some-value"),
-			key.Float64("some-double", math.Pi),
-			key.Int("some-int", 42),
-			key.Bool("some-boolean", true),
+		Attributes: []kv.KeyValue{
+			kv.String("some-string", "some-value"),
+			kv.Float64("some-double", math.Pi),
+			kv.Int("some-int", 42),
+			kv.Bool("some-boolean", true),
 		},
 		Links: []apitrace.Link{
 			{
 				SpanContext: spanContext([]byte{0x04}, []byte{0x05}),
-				Attributes: []core.KeyValue{
-					key.Float64("e", math.E),
+				Attributes: []kv.KeyValue{
+					kv.Float64("e", math.E),
 				},
 			},
 		},
@@ -136,8 +136,8 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 			{
 				Name: "test-event",
 				Time: time.Unix(annotationTime.Unix(), int64(annotationTime.Nanosecond())),
-				Attributes: []core.KeyValue{
-					key.String("annotation-attr", "annotation-val"),
+				Attributes: []kv.KeyValue{
+					kv.String("annotation-attr", "annotation-val"),
 				},
 			},
 		},
@@ -146,7 +146,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 		HasRemoteParent:  true,
 		DroppedLinkCount: 2,
 		ChildSpanCount:   5,
-		Resource:         resource.New(key.String("host.name", "xanadu")),
+		Resource:         resource.New(kv.String("host.name", "xanadu")),
 	}
 
 	got, err := OCProtoSpanToOTelSpanData(&span)
@@ -154,11 +154,11 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 		t.Fatalf("failed to convert proto span to otel span data: %v", err)
 	}
 
-	if diff := cmp.Diff(want, got, cmp.AllowUnexported(core.Value{}), cmpopts.SortSlices(keyValueLess)); diff != "" {
+	if diff := cmp.Diff(want, got, cmp.AllowUnexported(value.Value{}), cmpopts.SortSlices(keyValueLess)); diff != "" {
 		t.Errorf("otel span: (-want +got):\n%s", diff)
 	}
 }
 
-func keyValueLess(lhs, rhs core.KeyValue) bool {
+func keyValueLess(lhs, rhs kv.KeyValue) bool {
 	return lhs.Key < rhs.Key
 }

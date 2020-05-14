@@ -9,8 +9,8 @@ import (
 
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/kv/value"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
@@ -42,8 +42,8 @@ func oTelSpanKind(kind tracepb.Span_SpanKind) apitrace.SpanKind {
 // Creates an OpenTelemetry SpanContext from information in an OC Span.
 // Note that the OC Span has no equivalent to TraceFlags field in the
 // OpenTelemetry SpanContext type.
-func spanContext(traceID []byte, spanID []byte) core.SpanContext {
-	ctx := core.SpanContext{}
+func spanContext(traceID []byte, spanID []byte) apitrace.SpanContext {
+	ctx := apitrace.SpanContext{}
 	if traceID != nil {
 		copy(ctx.TraceID[:], traceID[:])
 	}
@@ -57,37 +57,37 @@ func spanResource(span *tracepb.Span) *resource.Resource {
 	if span.Resource == nil {
 		return nil
 	}
-	attrs := make([]core.KeyValue, len(span.Resource.Labels))
+	attrs := make([]kv.KeyValue, len(span.Resource.Labels))
 	i := 0
 	for k, v := range span.Resource.Labels {
-		attrs[i] = key.String(k, v)
+		attrs[i] = kv.String(k, v)
 		i++
 	}
 	return resource.New(attrs...)
 }
 
-// Create []core.KeyValue attributes from an OC *Span_Attributes
-func createOTelAttributes(attributes *tracepb.Span_Attributes) []core.KeyValue {
+// Create []kv.KeyValue attributes from an OC *Span_Attributes
+func createOTelAttributes(attributes *tracepb.Span_Attributes) []kv.KeyValue {
 	if attributes == nil || attributes.AttributeMap == nil {
 		return nil
 	}
 
-	oTelAttrs := make([]core.KeyValue, len(attributes.AttributeMap))
+	oTelAttrs := make([]kv.KeyValue, len(attributes.AttributeMap))
 
 	i := 0
 	for key, attributeValue := range attributes.AttributeMap {
-		keyValue := core.KeyValue{
-			Key: core.Key(key),
+		keyValue := kv.KeyValue{
+			Key: kv.Key(key),
 		}
-		switch value := attributeValue.Value.(type) {
+		switch val := attributeValue.Value.(type) {
 		case *tracepb.AttributeValue_StringValue:
-			keyValue.Value = core.String(attributeValueAsString(attributeValue))
+			keyValue.Value = value.String(attributeValueAsString(attributeValue))
 		case *tracepb.AttributeValue_BoolValue:
-			keyValue.Value = core.Bool(value.BoolValue)
+			keyValue.Value = value.Bool(val.BoolValue)
 		case *tracepb.AttributeValue_IntValue:
-			keyValue.Value = core.Int64(value.IntValue)
+			keyValue.Value = value.Int64(val.IntValue)
 		case *tracepb.AttributeValue_DoubleValue:
-			keyValue.Value = core.Float64(value.DoubleValue)
+			keyValue.Value = value.Float64(val.DoubleValue)
 		}
 		oTelAttrs[i] = keyValue
 		i++
