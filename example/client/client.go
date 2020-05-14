@@ -14,7 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/plugin/httptrace"
 
@@ -56,7 +56,7 @@ func main() {
 
 	client := http.DefaultClient
 	ctx := correlation.NewContext(context.Background(),
-		key.String("username", "donuts"),
+		kv.String("username", "donuts"),
 	)
 
 	var body []byte
