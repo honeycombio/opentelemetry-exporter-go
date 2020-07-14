@@ -4,7 +4,7 @@ Pass your Honeycomb API key, found on your Honeycomb Team Settings page and your
 
 ## To run the client/server example:
 
-In `example/server` run `go install && servier -apikey=<your-api-key> -dataset=opentelemetry`
+In `example/server` run `go install && server -apikey=<your-api-key> -dataset=opentelemetry`
 
 In `example/client` run `go install && client -apikey=<your-api-key> -dataset=opentelemetry`
 
