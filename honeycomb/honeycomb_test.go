@@ -15,6 +15,7 @@ import (
 	libhoney "github.com/honeycombio/libhoney-go"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -625,10 +626,10 @@ func TestHoneycombOutputWithResource(t *testing.T) {
 	assert.NotNil(exporter)
 
 	tr, err := setUpTestProvider(exporter,
-		sdktrace.WithResourceAttributes(
+		sdktrace.WithResource(resource.New(
 			kv.Int64("a", middle),
 			kv.Int64("c", middle),
-		))
+		)))
 
 	ctx, span := tr.Start(context.TODO(), "myTestSpan")
 	assert.Nil(err)
