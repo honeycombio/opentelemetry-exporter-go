@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"google.golang.org/grpc/codes"
 
-	libhoney "github.com/honeycombio/libhoney-go"
+	"github.com/honeycombio/libhoney-go/transmission"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -20,35 +20,35 @@ import (
 )
 
 func TestGetHoneycombTraceID(t *testing.T) {
-	tests := []struct{
-		name string
+	tests := []struct {
+		name    string
 		traceID string
-		want string
+		want    string
 	}{
 		{
-			name: "64-bit traceID",
+			name:    "64-bit traceID",
 			traceID: "cbe4decd12429177",
-			want: "cbe4decd12429177",
+			want:    "cbe4decd12429177",
 		},
 		{
-			name: "128-bit zero-padded traceID",
+			name:    "128-bit zero-padded traceID",
 			traceID: "0000000000000000cbe4decd12429177",
-			want: "cbe4decd12429177",
+			want:    "cbe4decd12429177",
 		},
 		{
-			name: "128-bit non-zero-padded traceID",
+			name:    "128-bit non-zero-padded traceID",
 			traceID: "f23b42eac289a0fdcde48fcbe3ab1a32",
-			want: "f23b42eac289a0fdcde48fcbe3ab1a32",
+			want:    "f23b42eac289a0fdcde48fcbe3ab1a32",
 		},
 		{
-			name: "Non-hex traceID",
+			name:    "Non-hex traceID",
 			traceID: "foobar1",
-			want: "666f6f62617231",
+			want:    "666f6f62617231",
 		},
 		{
-			name: "Longer non-hex traceID",
+			name:    "Longer non-hex traceID",
 			traceID: "foobarbaz",
-			want: "666f6f6261726261",
+			want:    "666f6f6261726261",
 		},
 	}
 
@@ -168,7 +168,7 @@ func TestExport(t *testing.T) {
 	}
 }
 
-func makeTestExporter(mockHoneycomb *libhoney.MockOutput, opts ...ExporterOption) (*Exporter, error) {
+func makeTestExporter(mockHoneycomb *transmission.MockSender, opts ...ExporterOption) (*Exporter, error) {
 	return NewExporter(
 		Config{
 			APIKey: "overridden",
@@ -176,7 +176,7 @@ func makeTestExporter(mockHoneycomb *libhoney.MockOutput, opts ...ExporterOption
 		append(opts,
 			TargetingDataset("test"),
 			WithServiceName("opentelemetry-test"),
-			withHoneycombOutput(mockHoneycomb))...,
+			withHoneycombSender(mockHoneycomb))...,
 	)
 }
 
@@ -195,7 +195,7 @@ func setUpTestProvider(exporter exporttrace.SpanSyncer, opts ...sdktrace.Provide
 	return global.TraceProvider().Tracer("honeycomb/test"), nil
 }
 
-func setUpTestExporter(mockHoneycomb *libhoney.MockOutput, opts ...ExporterOption) (apitrace.Tracer, error) {
+func setUpTestExporter(mockHoneycomb *transmission.MockSender, opts ...ExporterOption) (apitrace.Tracer, error) {
 	exporter, err := makeTestExporter(mockHoneycomb, opts...)
 	if err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func setUpTestExporter(mockHoneycomb *libhoney.MockOutput, opts ...ExporterOptio
 }
 
 func TestHoneycombOutput(t *testing.T) {
-	mockHoneycomb := &libhoney.MockOutput{}
+	mockHoneycomb := &transmission.MockSender{}
 	assert := assert.New(t)
 	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Nil(err)
@@ -223,7 +223,7 @@ func TestHoneycombOutput(t *testing.T) {
 	span.End()
 
 	assert.Len(mockHoneycomb.Events(), 1)
-	mainEventFields := mockHoneycomb.Events()[0].Fields()
+	mainEventFields := mockHoneycomb.Events()[0].Data
 	traceID := mainEventFields["trace.trace_id"]
 	spanTraceID := span.SpanContext().TraceID
 	honeycombTranslated := getHoneycombTraceID(spanTraceID[:])
@@ -260,7 +260,7 @@ func TestHoneycombOutput(t *testing.T) {
 }
 
 func TestHoneycombOutputWithMessageEvent(t *testing.T) {
-	mockHoneycomb := &libhoney.MockOutput{}
+	mockHoneycomb := &transmission.MockSender{}
 	assert := assert.New(t)
 	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Nil(err)
@@ -274,7 +274,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Len(mockHoneycomb.Events(), 2)
 
 	// Check the fields on the main span event.
-	mainEventFields := mockHoneycomb.Events()[1].Fields()
+	mainEventFields := mockHoneycomb.Events()[1].Data
 	traceID := mainEventFields["trace.trace_id"]
 	spanTraceID := span.SpanContext().TraceID
 	honeycombTranslatedTraceID := getHoneycombTraceID(spanTraceID[:])
@@ -298,7 +298,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Equal(mockHoneycomb.Events()[1].Dataset, "test")
 
 	// Check the fields on the zero-duration Message event.
-	msgEventFields := mockHoneycomb.Events()[0].Fields()
+	msgEventFields := mockHoneycomb.Events()[0].Data
 	msgEventName := msgEventFields["name"]
 	assert.Equal("handling this...", msgEventName)
 
@@ -325,7 +325,7 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	linkTraceID, _ := apitrace.IDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID, _ := apitrace.SpanIDFromHex("0102030405060709")
 
-	mockHoneycomb := &libhoney.MockOutput{}
+	mockHoneycomb := &transmission.MockSender{}
 	assert := assert.New(t)
 
 	tr, err := setUpTestExporter(mockHoneycomb)
@@ -341,8 +341,8 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	assert.Len(mockHoneycomb.Events(), 2)
 
 	// Check the fields on the main span event.
-	linkFields := mockHoneycomb.Events()[0].Fields()
-	mainEventFields := mockHoneycomb.Events()[1].Fields()
+	linkFields := mockHoneycomb.Events()[0].Data
+	mainEventFields := mockHoneycomb.Events()[1].Data
 	traceID := linkFields["trace.trace_id"]
 	spanContextTraceID := span.SpanContext().TraceID
 	honeycombTranslatedTraceID := getHoneycombTraceID(spanContextTraceID[:])
@@ -507,7 +507,7 @@ func TestHoneycombDynamicFieldValidation(t *testing.T) {
 }
 
 func TestHoneycombOutputWithStaticFields(t *testing.T) {
-	mockHoneycomb := &libhoney.MockOutput{}
+	mockHoneycomb := &transmission.MockSender{}
 	assert := assert.New(t)
 
 	tr, err := setUpTestExporter(mockHoneycomb,
@@ -528,7 +528,7 @@ func TestHoneycombOutputWithStaticFields(t *testing.T) {
 	span.End()
 
 	assert.Len(mockHoneycomb.Events(), 1)
-	mainEventFields := mockHoneycomb.Events()[0].Fields()
+	mainEventFields := mockHoneycomb.Events()[0].Data
 
 	assert.Equal("yes", mainEventFields["ex.com/string"])
 	assert.Equal(3, mainEventFields["a"])
@@ -537,7 +537,7 @@ func TestHoneycombOutputWithStaticFields(t *testing.T) {
 }
 
 func TestHoneycombOutputWithDynamicFields(t *testing.T) {
-	mockHoneycomb := &libhoney.MockOutput{}
+	mockHoneycomb := &transmission.MockSender{}
 	assert := assert.New(t)
 
 	constantly := func(v interface{}) func() interface{} {
@@ -563,7 +563,7 @@ func TestHoneycombOutputWithDynamicFields(t *testing.T) {
 	span.End()
 
 	assert.Len(mockHoneycomb.Events(), 1)
-	mainEventFields := mockHoneycomb.Events()[0].Fields()
+	mainEventFields := mockHoneycomb.Events()[0].Data
 
 	assert.Equal("yes", mainEventFields["ex.com/string"])
 	assert.Equal(3, mainEventFields["a"])
@@ -572,7 +572,7 @@ func TestHoneycombOutputWithDynamicFields(t *testing.T) {
 }
 
 func TestHoneycombOutputWithStaticAndDynamicFields(t *testing.T) {
-	mockHoneycomb := &libhoney.MockOutput{}
+	mockHoneycomb := &transmission.MockSender{}
 	assert := assert.New(t)
 
 	baseValue := 10
@@ -601,7 +601,7 @@ func TestHoneycombOutputWithStaticAndDynamicFields(t *testing.T) {
 	span.End()
 
 	assert.Len(mockHoneycomb.Events(), 1)
-	mainEventFields := mockHoneycomb.Events()[0].Fields()
+	mainEventFields := mockHoneycomb.Events()[0].Data
 
 	assert.Equal("yes", mainEventFields["ex.com/string"])
 	assert.Equal(3, mainEventFields["a"])
@@ -610,7 +610,7 @@ func TestHoneycombOutputWithStaticAndDynamicFields(t *testing.T) {
 }
 
 func TestHoneycombOutputWithResource(t *testing.T) {
-	mockHoneycomb := &libhoney.MockOutput{}
+	mockHoneycomb := &transmission.MockSender{}
 	assert := assert.New(t)
 
 	const (
@@ -644,13 +644,13 @@ func TestHoneycombOutputWithResource(t *testing.T) {
 
 	assert.Len(mockHoneycomb.Events(), 2)
 
-	mainEventFields := mockHoneycomb.Events()[1].Fields()
+	mainEventFields := mockHoneycomb.Events()[1].Data
 	assert.Equal(int64(overlay), mainEventFields["a"])
 	assert.Equal(int64(underlay), mainEventFields["b"])
 	assert.Equal(int64(middle), mainEventFields["c"])
 	assert.Equal(int64(overlay), mainEventFields["d"])
 
-	messageEventFields := mockHoneycomb.Events()[0].Fields()
+	messageEventFields := mockHoneycomb.Events()[0].Data
 	assert.Equal(int64(middle), messageEventFields["a"])
 	assert.Equal(int64(underlay), mainEventFields["b"])
 	assert.Equal(int64(middle), mainEventFields["c"])

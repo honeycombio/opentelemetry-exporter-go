@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 
 	libhoney "github.com/honeycombio/libhoney-go"
+	"github.com/honeycombio/libhoney-go/transmission"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -51,7 +52,7 @@ type exporterConfig struct {
 	dynamicFields     map[string]func() interface{}
 	apiURL            string
 	userAgentAddendum string
-	output            libhoney.Output
+	sender            transmission.Sender
 	onError           func(error)
 	debug             bool
 }
@@ -281,18 +282,18 @@ func WithDebugEnabled() ExporterOption {
 	return WithDebug(true)
 }
 
-// withHoneycombOutput sets the event output handler on the Honeycomb event
-// transmission subsystem.
-func withHoneycombOutput(o libhoney.Output) ExporterOption {
+// withHoneycombSender sets the event sender on the Honeycomb transmission subsystem.
+func withHoneycombSender(s transmission.Sender) ExporterOption {
 	return func(c *exporterConfig) error {
-		c.output = o
+		c.sender = s
 		return nil
 	}
 }
 
 // Exporter is an implementation of trace.Exporter that uploads a span to Honeycomb.
 type Exporter struct {
-	builder *libhoney.Builder
+	client *libhoney.Client
+
 	// serviceName identifies your application. If set it will be added to all
 	// events as `service_name`.
 	//
@@ -415,9 +416,9 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 		econf.dataset = defaultDataset
 	}
 
-	libhoneyConfig := libhoney.Config{
-		WriteKey: config.APIKey,
-		Dataset:  econf.dataset,
+	libhoneyConfig := libhoney.ClientConfig{
+		APIKey:  config.APIKey,
+		Dataset: econf.dataset,
 	}
 	if len(econf.apiURL) != 0 {
 		libhoneyConfig.APIHost = econf.apiURL
@@ -427,23 +428,23 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 		userAgent = "Honeycomb-OpenTelemetry-exporter"
 	}
 	libhoney.UserAgentAddition = userAgent + "/" + versionStr
-	if econf.output != nil {
-		libhoneyConfig.Output = econf.output
+	if econf.sender != nil {
+		libhoneyConfig.Transmission = econf.sender
 	}
 	if econf.debug {
 		libhoneyConfig.Logger = &libhoney.DefaultLogger{}
 	}
 
-	if err := libhoney.Init(libhoneyConfig); err != nil {
+	client, err := libhoney.NewClient(libhoneyConfig)
+	if err != nil {
 		return nil, err
 	}
-	builder := libhoney.NewBuilder()
 
 	for name, value := range econf.staticFields {
-		builder.AddField(name, value)
+		client.AddField(name, value)
 	}
 	for name, f := range econf.dynamicFields {
-		builder.AddDynamicField(name, f)
+		client.AddDynamicField(name, f)
 	}
 
 	onError := econf.onError
@@ -454,7 +455,7 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	}
 
 	return &Exporter{
-		builder:     builder,
+		client:      client,
 		serviceName: econf.serviceName,
 		onError:     onError,
 	}, nil
@@ -466,7 +467,7 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 // This method will block until the passed context.Context is canceled, or until
 // exporter.Close is called.
 func (e *Exporter) RunErrorLogger(ctx context.Context) {
-	responses := libhoney.TxResponses()
+	responses := e.client.TxResponses()
 	for {
 		select {
 		case r, ok := <-responses:
@@ -484,7 +485,7 @@ func (e *Exporter) RunErrorLogger(ctx context.Context) {
 
 // ExportSpan exports a SpanData to Honeycomb.
 func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
-	ev := e.builder.NewEvent()
+	ev := e.client.NewEvent()
 
 	applyResourceAttributes := func(ev *libhoney.Event) {
 		if data.Resource != nil {
@@ -506,7 +507,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 
 	// We send these message events as zero-duration spans.
 	for _, a := range data.MessageEvents {
-		spanEv := e.builder.NewEvent()
+		spanEv := e.client.NewEvent()
 		// Treat resource-defined attributes as underlays, with any same-keyed message event
 		// attributes taking precedence. Apply them first.
 		applyResourceAttributes(spanEv)
@@ -544,7 +545,7 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	}
 
 	for _, spanLink := range data.Links {
-		linkEv := e.builder.NewEvent()
+		linkEv := e.client.NewEvent()
 		linkEv.Add(link{
 			TraceID:     getHoneycombTraceID(data.SpanContext.TraceID[:]),
 			ParentID:    data.SpanContext.SpanID.String(),
@@ -577,5 +578,5 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 // Close waits for all in-flight messages to be sent. You should
 // call Close() before app termination.
 func (e *Exporter) Close() {
-	libhoney.Close()
+	e.client.Close()
 }
