@@ -10,7 +10,6 @@ import (
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/kv/value"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
@@ -81,13 +80,13 @@ func createOTelAttributes(attributes *tracepb.Span_Attributes) []kv.KeyValue {
 		}
 		switch val := attributeValue.Value.(type) {
 		case *tracepb.AttributeValue_StringValue:
-			keyValue.Value = value.String(attributeValueAsString(attributeValue))
+			keyValue.Value = kv.StringValue(attributeValueAsString(attributeValue))
 		case *tracepb.AttributeValue_BoolValue:
-			keyValue.Value = value.Bool(val.BoolValue)
+			keyValue.Value = kv.BoolValue(val.BoolValue)
 		case *tracepb.AttributeValue_IntValue:
-			keyValue.Value = value.Int64(val.IntValue)
+			keyValue.Value = kv.Int64Value(val.IntValue)
 		case *tracepb.AttributeValue_DoubleValue:
-			keyValue.Value = value.Float64(val.DoubleValue)
+			keyValue.Value = kv.Float64Value(val.DoubleValue)
 		}
 		oTelAttrs[i] = keyValue
 		i++

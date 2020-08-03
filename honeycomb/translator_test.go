@@ -12,7 +12,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/kv/value"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -154,7 +153,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 		t.Fatalf("failed to convert proto span to otel span data: %v", err)
 	}
 
-	if diff := cmp.Diff(want, got, cmp.AllowUnexported(value.Value{}), cmpopts.SortSlices(keyValueLess)); diff != "" {
+	if diff := cmp.Diff(want, got, cmp.AllowUnexported(kv.Value{}), cmpopts.SortSlices(keyValueLess)); diff != "" {
 		t.Errorf("otel span: (-want +got):\n%s", diff)
 	}
 }
