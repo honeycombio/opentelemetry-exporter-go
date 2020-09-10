@@ -7,12 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
-	"google.golang.org/grpc/codes"
+	"go.opentelemetry.io/otel/label"
 
 	"github.com/honeycombio/libhoney-go/transmission"
+	"github.com/stretchr/testify/assert"
+
+	"google.golang.org/grpc/codes"
+
+	"go.opentelemetry.io/otel/api/global"
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -212,11 +214,11 @@ func TestHoneycombOutput(t *testing.T) {
 	_, span := tr.Start(context.TODO(), "myTestSpan")
 	var nilString string
 	span.SetAttributes(
-		kv.String("ex.com/string", "yes"),
-		kv.Bool("ex.com/bool", true),
-		kv.Int64("ex.com/int64", 42),
-		kv.Float64("ex.com/float64", 3.14),
-		kv.String("ex.com/nil", nilString),
+		label.String("ex.com/string", "yes"),
+		label.Bool("ex.com/bool", true),
+		label.Int64("ex.com/int64", 42),
+		label.Float64("ex.com/float64", 3.14),
+		label.String("ex.com/nil", nilString),
 	)
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
@@ -266,7 +268,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	assert.Nil(err)
 
 	ctx, span := tr.Start(context.TODO(), "myTestSpan")
-	span.AddEvent(ctx, "handling this...", kv.Int("request-handled", 100))
+	span.AddEvent(ctx, "handling this...", label.Int("request-handled", 100))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()
@@ -522,7 +524,7 @@ func TestHoneycombOutputWithStaticFields(t *testing.T) {
 
 	_, span := tr.Start(context.TODO(), "myTestSpan")
 	span.SetAttributes(
-		kv.String("ex.com/string", "yes"),
+		label.String("ex.com/string", "yes"),
 	)
 
 	span.End()
@@ -557,7 +559,7 @@ func TestHoneycombOutputWithDynamicFields(t *testing.T) {
 
 	_, span := tr.Start(context.TODO(), "myTestSpan")
 	span.SetAttributes(
-		kv.String("ex.com/string", "yes"),
+		label.String("ex.com/string", "yes"),
 	)
 
 	span.End()
@@ -595,7 +597,7 @@ func TestHoneycombOutputWithStaticAndDynamicFields(t *testing.T) {
 
 	_, span := tr.Start(context.TODO(), "myTestSpan")
 	span.SetAttributes(
-		kv.String("ex.com/string", "yes"),
+		label.String("ex.com/string", "yes"),
 	)
 
 	span.End()
@@ -627,17 +629,17 @@ func TestHoneycombOutputWithResource(t *testing.T) {
 
 	tr, err := setUpTestProvider(exporter,
 		sdktrace.WithResource(resource.New(
-			kv.Int64("a", middle),
-			kv.Int64("c", middle),
+			label.Int64("a", middle),
+			label.Int64("c", middle),
 		)))
 
 	ctx, span := tr.Start(context.TODO(), "myTestSpan")
 	assert.Nil(err)
 	span.SetAttributes(
-		kv.Int64("a", overlay),
-		kv.Int64("d", overlay),
+		label.Int64("a", overlay),
+		label.Int64("d", overlay),
 	)
-	span.AddEvent(ctx, "something", kv.Int64("c", overlay))
+	span.AddEvent(ctx, "something", label.Int64("c", overlay))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()
