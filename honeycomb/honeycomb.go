@@ -28,6 +28,7 @@ import (
 
 	libhoney "github.com/honeycombio/libhoney-go"
 	"github.com/honeycombio/libhoney-go/transmission"
+
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -400,7 +401,7 @@ func NewExporter(config Config, opts ...ExporterOption) (*Exporter, error) {
 	// Developer note: bump this with each release
 	// TODO: Stamp this via a variable set at link time with a value derived
 	// from the current VCS tag.
-	const versionStr = "0.10.0"
+	const versionStr = "0.11.0"
 
 	if len(config.APIKey) == 0 {
 		return nil, errors.New("API key must not be empty")

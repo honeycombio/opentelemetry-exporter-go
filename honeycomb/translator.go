@@ -4,10 +4,10 @@ import (
 	"errors"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes/timestamp"
+
+	"google.golang.org/grpc/codes"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
