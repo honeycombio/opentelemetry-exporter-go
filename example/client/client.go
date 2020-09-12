@@ -40,15 +40,15 @@ func main() {
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
 
-	exporter, errExp := honeycomb.NewExporter(
+	exporter, err := honeycomb.NewExporter(
 		honeycomb.Config{
 			APIKey: *apikey,
 		},
 		honeycomb.TargetingDataset(*dataset),
 		honeycomb.WithServiceName("opentelemetry-client"),
 		honeycomb.WithDebugEnabled())
-	if errExp != nil {
-		log.Fatal(errExp)
+	if err != nil {
+		log.Fatal(err)
 	}
 	defer exporter.Close()
 
@@ -68,7 +68,7 @@ func main() {
 	var body []byte
 
 	tr := global.Tracer("example/client")
-	err := func(ctx context.Context) error {
+	err = func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerServiceKey.String("ExampleService")))
 		defer span.End()
 		req, _ := http.NewRequestWithContext(ctx, "GET", *url, nil)
