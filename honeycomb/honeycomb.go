@@ -310,11 +310,11 @@ var _ trace.SpanSyncer = (*Exporter)(nil)
 
 // spanEvent represents an event attached to a specific span.
 type spanEvent struct {
-	Name       string `json:"name"`
-	TraceID    string `json:"trace.trace_id"`
-	ParentID   string `json:"trace.parent_id,omitempty"`
-	ParentName string `json:"trace.parent_name,omitempty"`
-	SpanType   string `json:"meta.span_type"`
+	Name           string `json:"name"`
+	TraceID        string `json:"trace.trace_id"`
+	ParentID       string `json:"trace.parent_id,omitempty"`
+	ParentName     string `json:"trace.parent_name,omitempty"`
+	AnnotationType string `json:"meta.annotation_type"`
 }
 
 type spanRefType int64
@@ -522,11 +522,11 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 		spanEv.Timestamp = a.Time
 
 		spanEv.Add(spanEvent{
-			Name:       a.Name,
-			TraceID:    getHoneycombTraceID(data.SpanContext.TraceID[:]),
-			ParentID:   data.SpanContext.SpanID.String(),
-			ParentName: data.Name,
-			SpanType:   "span_event",
+			Name:           a.Name,
+			TraceID:        getHoneycombTraceID(data.SpanContext.TraceID[:]),
+			ParentID:       data.SpanContext.SpanID.String(),
+			ParentName:     data.Name,
+			AnnotationType: "span_event",
 		})
 		if err := spanEv.Send(); err != nil {
 			e.onError(err)
@@ -537,22 +537,22 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	// TraceID and ParentID are used to identify the span with which the trace is associated
 	// We are modeling Links for now as child spans rather than properties of the event.
 	type link struct {
-		TraceID     string      `json:"trace.trace_id"`
-		ParentID    string      `json:"trace.parent_id,omitempty"`
-		LinkTraceID string      `json:"trace.link.trace_id"`
-		LinkSpanID  string      `json:"trace.link.span_id"`
-		SpanType    string      `json:"meta.span_type"`
-		RefType     spanRefType `json:"ref_type,omitempty"`
+		TraceID        string      `json:"trace.trace_id"`
+		ParentID       string      `json:"trace.parent_id,omitempty"`
+		LinkTraceID    string      `json:"trace.link.trace_id"`
+		LinkSpanID     string      `json:"trace.link.span_id"`
+		AnnotationType string      `json:"meta.annotation_type"`
+		RefType        spanRefType `json:"ref_type,omitempty"`
 	}
 
 	for _, spanLink := range data.Links {
 		linkEv := e.client.NewEvent()
 		linkEv.Add(link{
-			TraceID:     getHoneycombTraceID(data.SpanContext.TraceID[:]),
-			ParentID:    data.SpanContext.SpanID.String(),
-			LinkTraceID: getHoneycombTraceID(spanLink.TraceID[:]),
-			LinkSpanID:  spanLink.SpanID.String(),
-			SpanType:    "link",
+			TraceID:        getHoneycombTraceID(data.SpanContext.TraceID[:]),
+			ParentID:       data.SpanContext.SpanID.String(),
+			LinkTraceID:    getHoneycombTraceID(spanLink.TraceID[:]),
+			LinkSpanID:     spanLink.SpanID.String(),
+			AnnotationType: "link",
 			// TODO(akvanhar): properly set the reference type when specs are defined
 			// see https://github.com/open-telemetry/opentelemetry-specification/issues/65
 			RefType: spanRefTypeChildOf,

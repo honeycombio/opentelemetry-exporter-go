@@ -318,7 +318,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	msgEventServiceName := msgEventFields["service_name"]
 	assert.Equal("opentelemetry-test", msgEventServiceName)
 
-	spanEvent := msgEventFields["meta.span_type"]
+	spanEvent := msgEventFields["meta.annotation_type"]
 	assert.Equal("span_event", spanEvent)
 }
 
@@ -358,8 +358,8 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 
 	hclinkSpanID := linkFields["trace.link.span_id"]
 	assert.Equal("0102030405060709", hclinkSpanID)
-	linkSpanType := linkFields["meta.span_type"]
-	assert.Equal("link", linkSpanType)
+	linkAnnotationType := linkFields["meta.annotation_type"]
+	assert.Equal("link", linkAnnotationType)
 }
 
 func TestHoneycombConfigValidation(t *testing.T) {
