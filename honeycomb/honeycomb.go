@@ -565,7 +565,11 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	}
 
 	for _, kv := range data.Attributes {
-		ev.AddField(string(kv.Key), kv.Value.AsInterface())
+		if string(kv.Key) == "SampleRate" {
+			ev.SampleRate = uint(kv.Value.AsUint32())
+		} else {
+			ev.AddField(string(kv.Key), kv.Value.AsInterface())
+		}
 	}
 
 	ev.AddField("status.code", int32(data.StatusCode))
