@@ -306,7 +306,7 @@ type Exporter struct {
 	onError func(err error)
 }
 
-var _ trace.SpanSyncer = (*Exporter)(nil)
+var _ trace.SpanExporter = (*Exporter)(nil)
 
 // spanEvent represents an event attached to a specific span.
 type spanEvent struct {
@@ -484,8 +484,15 @@ func (e *Exporter) RunErrorLogger(ctx context.Context) {
 	}
 }
 
-// ExportSpan exports a SpanData to Honeycomb.
-func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
+// ExportSpana exports []SpanData to Honeycomb.
+func (e *Exporter) ExportSpans(ctx context.Context, sds []*trace.SpanData) error {
+	for _, span := range sds {
+		e.exportSpan(ctx, span)
+	}
+	return nil
+}
+
+func (e *Exporter) exportSpan(ctx context.Context, data *trace.SpanData) {
 	ev := e.client.NewEvent()
 
 	applyResourceAttributes := func(ev *libhoney.Event) {
@@ -576,8 +583,9 @@ func (e *Exporter) ExportSpan(ctx context.Context, data *trace.SpanData) {
 	}
 }
 
-// Close waits for all in-flight messages to be sent. You should
-// call Close() before app termination.
-func (e *Exporter) Close() {
+// Shutdown waits for all in-flight messages to be sent. You should
+// call Shutdoown() before app termination.
+func (e *Exporter) Shutdown(ctx context.Context) error {
 	e.client.Close()
+	return nil
 }
