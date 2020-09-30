@@ -181,19 +181,16 @@ func makeTestExporter(mockHoneycomb *transmission.MockSender, opts ...ExporterOp
 	)
 }
 
-func setUpTestProvider(exporter exporttrace.SpanSyncer, opts ...sdktrace.ProviderOption) (apitrace.Tracer, error) {
-	tp, err := sdktrace.NewProvider(
-		append([]sdktrace.ProviderOption{
+func setUpTestProvider(exporter exporttrace.SpanExporter, opts ...sdktrace.TracerProviderOption) (apitrace.Tracer, error) {
+	tp := sdktrace.NewTracerProvider(
+		append([]sdktrace.TracerProviderOption{
 			sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 			sdktrace.WithSyncer(exporter),
 		}, opts...)...,
 	)
-	if err != nil {
-		return nil, err
-	}
-	global.SetTraceProvider(tp)
+	global.SetTracerProvider(tp)
 
-	return global.TraceProvider().Tracer("honeycomb/test"), nil
+	return global.Tracer("honeycomb/test"), nil
 }
 
 func setUpTestExporter(mockHoneycomb *transmission.MockSender, opts ...ExporterOption) (apitrace.Tracer, error) {
@@ -332,10 +329,10 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Nil(err)
 
-	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.LinkedTo(apitrace.SpanContext{
+	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.WithLinks(apitrace.Link{apitrace.SpanContext{
 		TraceID: linkTraceID,
 		SpanID:  linkSpanID,
-	}))
+	}, nil}))
 
 	span.End()
 

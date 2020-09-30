@@ -14,9 +14,9 @@ import (
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 
-	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
-	otelhttptrace "go.opentelemetry.io/contrib/instrumentation/net/http/httptrace"
-	"go.opentelemetry.io/otel/api/correlation"
+	otelhttptrace "go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
+	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
@@ -27,12 +27,11 @@ import (
 func initTracer(exporter *honeycomb.Exporter) {
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exporter))
-	if err != nil {
-		log.Fatal(err)
-	}
-	global.SetTraceProvider(tp)
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter),
+	)
+	global.SetTracerProvider(tp)
 }
 
 func main() {
@@ -50,7 +49,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer exporter.Close()
+	defer exporter.Shutdown(context.Background())
 
 	initTracer(exporter)
 
@@ -59,7 +58,7 @@ func main() {
 
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
-	ctx := correlation.NewContext(context.Background(),
+	ctx := baggage.NewContext(context.Background(),
 		label.String("username", "donuts"),
 	)
 
