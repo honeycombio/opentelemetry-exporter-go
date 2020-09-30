@@ -16,7 +16,7 @@ import (
 
 	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
 	otelhttptrace "go.opentelemetry.io/contrib/instrumentation/net/http/httptrace"
-	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
@@ -59,7 +59,7 @@ func main() {
 
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
-	ctx := correlation.NewContext(context.Background(),
+	ctx := baggage.NewBaggage(context.Background(),
 		label.String("username", "donuts"),
 	)
 

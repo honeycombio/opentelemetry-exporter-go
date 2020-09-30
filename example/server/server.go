@@ -23,7 +23,7 @@ import (
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace"
-	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
@@ -65,7 +65,7 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
 
-		req = req.WithContext(correlation.ContextWithMap(req.Context(), correlation.NewMap(correlation.MapUpdate{
+		req = req.WithContext(baggage.ContextWithMap(req.Context(), baggage.NewMap(baggage.MapUpdate{
 			MultiKV: tags,
 		})))
 
