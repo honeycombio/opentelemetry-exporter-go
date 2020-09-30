@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"io"
 	"log"
@@ -22,7 +23,7 @@ import (
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
@@ -33,12 +34,11 @@ import (
 func initTracer(exporter *honeycomb.Exporter) {
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exporter))
-	if err != nil {
-		log.Fatal(err)
-	}
-	global.SetTraceProvider(tp)
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSyncer(exporter),
+	)
+	global.SetTracerProvider(tp)
 }
 
 func main() {
@@ -56,14 +56,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer exporter.Close()
+	defer exporter.Shutdown(context.Background())
 
 	initTracer(exporter)
 
-	tr := global.TraceProvider().Tracer("honeycomb/example/server")
+	tr := global.Tracer("honeycomb/example/server")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
-		attrs, tags, spanCtx := httptrace.Extract(req.Context(), req)
+		attrs, tags, spanCtx := otelhttptrace.Extract(req.Context(), req)
 
 		req = req.WithContext(baggage.ContextWithMap(req.Context(), baggage.NewMap(baggage.MapUpdate{
 			MultiKV: tags,
@@ -73,7 +73,7 @@ func main() {
 			trace.ContextWithRemoteSpanContext(req.Context(), spanCtx),
 			"hello",
 			trace.WithAttributes(attrs...),
-			trace.LinkedTo(spanCtx, attrs...),
+			trace.WithLinks(trace.Link{SpanContext: spanCtx, Attributes: attrs}),
 		)
 		defer span.End()
 
