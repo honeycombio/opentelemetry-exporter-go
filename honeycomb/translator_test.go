@@ -1,10 +1,11 @@
 package honeycomb
 
 import (
-	"go.opentelemetry.io/otel/label"
 	"math"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/otel/label"
 
 	resourcepb "github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1"
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -14,10 +15,9 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
-
-	"google.golang.org/grpc/codes"
 )
 
 func TestOCProtoSpanToOTelSpanData(t *testing.T) {
@@ -101,7 +101,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 				},
 			},
 		},
-		Status:                  &tracepb.Status{Code: int32(codes.Unknown), Message: "status message"},
+		Status:                  &tracepb.Status{Code: int32(codes.Unset), Message: "status message"},
 		SameProcessAsParentSpan: &wrappers.BoolValue{Value: false},
 		ChildSpanCount:          &wrappers.UInt32Value{Value: 5},
 		Resource: &resourcepb.Resource{
@@ -142,7 +142,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 				},
 			},
 		},
-		StatusCode:       codes.Unknown,
+		StatusCode:       codes.Unset,
 		StatusMessage:    "status message",
 		HasRemoteParent:  true,
 		DroppedLinkCount: 2,

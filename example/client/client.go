@@ -9,29 +9,37 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httptrace"
-	"time"
+	"os"
 
-	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
-
-	otelhttptrace "go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
-	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/api/baggage"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
+
+	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 )
 
-func initTracer(exporter *honeycomb.Exporter) {
-	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
-	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(exporter),
-	)
+func initTracer(exporter *honeycomb.Exporter) func() {
+	bsp := sdktrace.NewBatchSpanProcessor(exporter)
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
+	tp.ApplyConfig(
+		// The default takes parent sampler hints into account, which we don't need here.
+		sdktrace.Config{
+			// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
+			// In a production application, use sdktrace.ProbabilitySampler with a desired
+			// probability.
+			DefaultSampler: sdktrace.AlwaysSample(),
+		})
 	global.SetTracerProvider(tp)
+	global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(
+		propagators.TraceContext{},
+		propagators.Baggage{}))
+	return bsp.Shutdown
 }
 
 func main() {
@@ -50,45 +58,37 @@ func main() {
 		log.Fatal(err)
 	}
 	defer exporter.Shutdown(context.Background())
+	defer initTracer(exporter)()
+	tr := global.Tracer("honeycomb/example/client")
 
-	initTracer(exporter)
-
-	url := flag.String("server", "http://localhost:7777/hello", "server url")
+	url := flag.String("server", "http://localhost:7777/hello", "server URL")
 	flag.Parse()
+
+	ctx := otel.ContextWithBaggageValues(context.Background(),
+		label.String("username", "donuts"))
 
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
-	ctx := baggage.NewContext(context.Background(),
-		label.String("username", "donuts"),
-	)
+	ctx, span := tr.Start(ctx, "say hello",
+		trace.WithAttributes(semconv.PeerServiceKey.String("ExampleService")))
+	defer span.End()
 
-	ctx = httptrace.WithClientTrace(ctx, otelhttptrace.NewClientTrace(ctx))
-
-	var body []byte
-
-	tr := global.Tracer("example/client")
-	err = func(ctx context.Context) error {
-		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerServiceKey.String("ExampleService")))
-		defer span.End()
-		req, _ := http.NewRequestWithContext(ctx, "GET", *url, nil)
-
-		fmt.Printf("Sending request...\n")
-		res, err := client.Do(req)
-		if err != nil {
-			panic(err)
-		}
-		body, err = ioutil.ReadAll(res.Body)
-		_ = res.Body.Close()
-
-		return err
-	}(ctx)
-
+	req, err := http.NewRequestWithContext(ctx, "GET", *url, nil)
 	if err != nil {
 		panic(err)
 	}
+	_, req = otelhttptrace.W3C(ctx, req)
 
-	fmt.Printf("Response Received: %s\n\n\n", body)
-	fmt.Printf("Waiting for few seconds to export spans ...\n\n")
-	time.Sleep(10 * time.Second)
-	fmt.Printf("Inspect traces on stdout\n")
+	fmt.Println("Sending request...")
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "HTTP request failed: %v\n", err)
+	}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to read HTTP response body: %v\n", err)
+	}
+
+	fmt.Printf("Response received (HTTP status code %d): %s\n\n\n", res.StatusCode, body)
 }

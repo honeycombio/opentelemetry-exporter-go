@@ -10,10 +10,9 @@ import (
 	"github.com/honeycombio/libhoney-go/transmission"
 	"github.com/stretchr/testify/assert"
 
-	"google.golang.org/grpc/codes"
-
 	"go.opentelemetry.io/otel/api/global"
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -87,9 +86,10 @@ func TestExport(t *testing.T) {
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
-				Name:      "/foo",
-				StartTime: now,
-				EndTime:   now,
+				Name:       "/foo",
+				StartTime:  now,
+				EndTime:    now,
+				StatusCode: codes.Ok,
 			},
 			want: &span{
 				TraceID:       expectedTraceID,
@@ -106,9 +106,10 @@ func TestExport(t *testing.T) {
 					TraceID: traceID,
 					SpanID:  spanID,
 				},
-				Name:      "/bar",
-				StartTime: now,
-				EndTime:   now.Add(24 * time.Hour),
+				Name:       "/bar",
+				StartTime:  now,
+				EndTime:    now.Add(24 * time.Hour),
+				StatusCode: codes.Ok,
 			},
 			want: &span{
 				TraceID:       expectedTraceID,
@@ -119,7 +120,7 @@ func TestExport(t *testing.T) {
 			},
 		},
 		{
-			name: "status code OK",
+			name: "status code Unset",
 			data: &exporttrace.SpanData{
 				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
@@ -128,7 +129,7 @@ func TestExport(t *testing.T) {
 				Name:       "/baz",
 				StartTime:  now,
 				EndTime:    now,
-				StatusCode: codes.OK,
+				StatusCode: codes.Unset,
 			},
 			want: &span{
 				TraceID:       expectedTraceID,
@@ -139,7 +140,7 @@ func TestExport(t *testing.T) {
 			},
 		},
 		{
-			name: "status code not OK",
+			name: "status code Error",
 			data: &exporttrace.SpanData{
 				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
@@ -148,7 +149,7 @@ func TestExport(t *testing.T) {
 				Name:       "/bazError",
 				StartTime:  now,
 				EndTime:    now,
-				StatusCode: codes.PermissionDenied,
+				StatusCode: codes.Error,
 			},
 			want: &span{
 				TraceID:       expectedTraceID,
@@ -156,6 +157,26 @@ func TestExport(t *testing.T) {
 				Name:          "/bazError",
 				DurationMilli: 0,
 				Error:         true,
+			},
+		},
+		{
+			name: "status code Ok",
+			data: &exporttrace.SpanData{
+				SpanContext: apitrace.SpanContext{
+					TraceID: traceID,
+					SpanID:  spanID,
+				},
+				Name:       "/baz",
+				StartTime:  now,
+				EndTime:    now,
+				StatusCode: codes.Ok,
+			},
+			want: &span{
+				TraceID:       expectedTraceID,
+				ID:            expectedSpanID,
+				Name:          "/baz",
+				DurationMilli: 0,
+				Error:         false,
 			},
 		},
 	}
@@ -329,10 +350,13 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Nil(err)
 
-	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.WithLinks(apitrace.Link{apitrace.SpanContext{
-		TraceID: linkTraceID,
-		SpanID:  linkSpanID,
-	}, nil}))
+	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.WithLinks(apitrace.Link{
+		SpanContext: apitrace.SpanContext{
+			TraceID: linkTraceID,
+			SpanID:  linkSpanID,
+		},
+		Attributes: nil,
+	}))
 
 	span.End()
 

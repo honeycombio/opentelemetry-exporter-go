@@ -7,9 +7,8 @@ import (
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
-	"google.golang.org/grpc/codes"
-
 	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -187,13 +186,13 @@ func getStatusCode(span *tracepb.Span) codes.Code {
 		return codes.Code(span.Status.Code)
 	}
 
-	return codes.OK
+	return codes.Ok
 }
 
 func getStatusMessage(span *tracepb.Span) string {
 	switch {
 	case span.Status == nil:
-		return codes.OK.String()
+		return codes.Ok.String()
 	case span.Status.Message != "":
 		return span.Status.Message
 	default:
