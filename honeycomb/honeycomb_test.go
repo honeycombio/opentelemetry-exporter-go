@@ -347,7 +347,15 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	mockHoneycomb := &transmission.MockSender{}
 	assert := assert.New(t)
 
-	tr, err := setUpTestExporter(mockHoneycomb)
+	exporter, err := makeTestExporter(mockHoneycomb)
+	assert.Nil(err)
+	assert.NotNil(exporter)
+
+	tr, err := setUpTestProvider(exporter,
+		sdktrace.WithResource(resource.NewWithAttributes(
+			label.Int("zero", 0),
+			label.Int("one", 99), // NB: Deliberately not 1, to be overwritten later.
+		)))
 	assert.Nil(err)
 
 	_, span := tr.Start(context.TODO(), "myTestSpan", apitrace.WithLinks(apitrace.Link{
@@ -355,7 +363,10 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 			TraceID: linkTraceID,
 			SpanID:  linkSpanID,
 		},
-		Attributes: nil,
+		Attributes: []label.KeyValue{
+			label.Int("one", 1),
+			label.Int("two", 2),
+		},
 	}))
 
 	span.End()
@@ -381,6 +392,10 @@ func TestHoneycombOutputWithLinks(t *testing.T) {
 	assert.Equal("0102030405060709", hclinkSpanID)
 	linkAnnotationType := linkFields["meta.annotation_type"]
 	assert.Equal("link", linkAnnotationType)
+
+	assert.Equal(int64(0), linkFields["zero"])
+	assert.Equal(int64(1), linkFields["one"])
+	assert.Equal(int64(2), linkFields["two"])
 }
 
 func TestHoneycombConfigValidation(t *testing.T) {
@@ -652,6 +667,7 @@ func TestHoneycombOutputWithResource(t *testing.T) {
 			label.Int64("a", middle),
 			label.Int64("c", middle),
 		)))
+	assert.Nil(err)
 
 	_, span := tr.Start(context.TODO(), "myTestSpan")
 	assert.Nil(err)
