@@ -24,11 +24,10 @@ import (
 	"log"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
 	libhoney "github.com/honeycombio/libhoney-go"
 	"github.com/honeycombio/libhoney-go/transmission"
 
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 )
 
@@ -390,7 +389,7 @@ func honeycombSpan(s *trace.SpanData) *span {
 		hcSpan.DurationMilli = float64(e.Sub(s)) / float64(time.Millisecond)
 	}
 
-	if s.StatusCode != codes.OK {
+	if s.StatusCode == codes.Error {
 		hcSpan.Error = true
 	}
 	return hcSpan
@@ -484,7 +483,7 @@ func (e *Exporter) RunErrorLogger(ctx context.Context) {
 	}
 }
 
-// ExportSpana exports []SpanData to Honeycomb.
+// ExportSpans exports a sequence of OpenTelemetry spans to Honeycomb.
 func (e *Exporter) ExportSpans(ctx context.Context, sds []*trace.SpanData) error {
 	for _, span := range sds {
 		e.exportSpan(ctx, span)
