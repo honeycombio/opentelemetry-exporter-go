@@ -10,13 +10,13 @@ import (
 	"github.com/honeycombio/libhoney-go/transmission"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/global"
-	apitrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	exporttrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	apitrace "go.opentelemetry.io/otel/trace"
 )
 
 func TestGetHoneycombTraceID(t *testing.T) {
@@ -68,7 +68,7 @@ func TestGetHoneycombTraceID(t *testing.T) {
 
 func TestExport(t *testing.T) {
 	now := time.Now().Round(time.Microsecond)
-	traceID, _ := apitrace.IDFromHex("0102030405060708090a0b0c0d0e0f10")
+	traceID, _ := apitrace.TraceIDFromHex("0102030405060708090a0b0c0d0e0f10")
 	spanID, _ := apitrace.SpanIDFromHex("0102030405060708")
 
 	expectedTraceID := "0102030405060708090a0b0c0d0e0f10"
@@ -209,9 +209,9 @@ func setUpTestProvider(exporter exporttrace.SpanExporter, opts ...sdktrace.Trace
 			sdktrace.WithSyncer(exporter),
 		}, opts...)...,
 	)
-	global.SetTracerProvider(tp)
+	otel.SetTracerProvider(tp)
 
-	return global.Tracer("honeycomb/test"), nil
+	return otel.Tracer("honeycomb/test"), nil
 }
 
 func setUpTestExporter(mockHoneycomb *transmission.MockSender, opts ...ExporterOption) (apitrace.Tracer, error) {
@@ -284,8 +284,8 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 	tr, err := setUpTestExporter(mockHoneycomb)
 	assert.Nil(err)
 
-	ctx, span := tr.Start(context.TODO(), "myTestSpan")
-	span.AddEvent(ctx, "handling this...", label.Int("request-handled", 100))
+	_, span := tr.Start(context.TODO(), "myTestSpan")
+	span.AddEvent("handling this...", apitrace.WithAttributes(label.Int("request-handled", 100)))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()
@@ -341,7 +341,7 @@ func TestHoneycombOutputWithMessageEvent(t *testing.T) {
 }
 
 func TestHoneycombOutputWithLinks(t *testing.T) {
-	linkTraceID, _ := apitrace.IDFromHex("0102030405060709090a0b0c0d0e0f11")
+	linkTraceID, _ := apitrace.TraceIDFromHex("0102030405060709090a0b0c0d0e0f11")
 	linkSpanID, _ := apitrace.SpanIDFromHex("0102030405060709")
 
 	mockHoneycomb := &transmission.MockSender{}
@@ -648,18 +648,18 @@ func TestHoneycombOutputWithResource(t *testing.T) {
 	assert.NotNil(exporter)
 
 	tr, err := setUpTestProvider(exporter,
-		sdktrace.WithResource(resource.New(
+		sdktrace.WithResource(resource.NewWithAttributes(
 			label.Int64("a", middle),
 			label.Int64("c", middle),
 		)))
 
-	ctx, span := tr.Start(context.TODO(), "myTestSpan")
+	_, span := tr.Start(context.TODO(), "myTestSpan")
 	assert.Nil(err)
 	span.SetAttributes(
 		label.Int64("a", overlay),
 		label.Int64("d", overlay),
 	)
-	span.AddEvent(ctx, "something", label.Int64("c", overlay))
+	span.AddEvent("something", apitrace.WithAttributes(label.Int64("c", overlay)))
 	time.Sleep(time.Duration(0.5 * float64(time.Millisecond)))
 
 	span.End()

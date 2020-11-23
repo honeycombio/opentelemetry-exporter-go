@@ -4,9 +4,9 @@ import (
 	"io"
 	"net/http"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func speakPlainTextTo(w http.ResponseWriter) {
@@ -20,12 +20,11 @@ func makeHandler() http.Handler {
 		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			ctx := req.Context()
 			span := trace.SpanFromContext(ctx)
-
 			span.SetAttributes(label.String("ex.com/another", "yes"))
 
 			eventAttrs := make([]label.KeyValue, 1, 2)
 			eventAttrs[0] = label.Int("request-handled", 100)
-			userNameVal := otel.BaggageValue(ctx, userNameKey)
+			userNameVal := propagation.BaggageValue(ctx, userNameKey)
 			if userNameVal.Type() != label.INVALID {
 				attr := label.KeyValue{
 					Key:   userNameKey,
@@ -34,11 +33,11 @@ func makeHandler() http.Handler {
 				span.SetAttributes(attr)
 				eventAttrs = append(eventAttrs, attr)
 			}
-			span.AddEvent(ctx, "handling this...", eventAttrs...)
+			span.AddEvent("handling this...", trace.WithAttributes(eventAttrs...))
 
 			speakPlainTextTo(w)
 			_, err := io.WriteString(w, "Hello, world!\n")
-			span.RecordError(ctx, err)
+			span.RecordError(err)
 		}))
 	return &mux
 }
