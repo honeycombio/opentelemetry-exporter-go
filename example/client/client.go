@@ -14,6 +14,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
@@ -62,10 +64,8 @@ func main() {
 	url := flag.String("server", "http://localhost:7777/hello", "server URL")
 	flag.Parse()
 
-	ctx := context.Background()
-	// TODO: create ctx with username set
-	// ctx := propagation.ContextWithMap(context.Background(),
-	// 	label.String("username", "donuts"))
+	ctx := baggage.ContextWithValues(context.Background(),
+		label.String("username", "donuts"))
 
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
