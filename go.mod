@@ -13,6 +13,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.14.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.14.0
 	go.opentelemetry.io/otel v0.14.0
+	go.opentelemetry.io/otel/exporters/otlp v0.14.0
 	go.opentelemetry.io/otel/sdk v0.14.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	google.golang.org/appengine v1.6.6 // indirect

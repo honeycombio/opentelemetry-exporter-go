@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"flag"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -25,15 +26,18 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
-
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/exporters/otlp"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func initTracer(exporter *honeycomb.Exporter) func(context.Context) error {
+func initTracer(exporter *otlp.Exporter) func(context.Context) error {
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
 	tp.ApplyConfig(
@@ -43,6 +47,10 @@ func initTracer(exporter *honeycomb.Exporter) func(context.Context) error {
 			// In a production application, use sdktrace.ProbabilitySampler with a desired
 			// probability.
 			DefaultSampler: sdktrace.AlwaysSample(),
+			Resource: resource.NewWithAttributes(
+				label.String("service.name", "server"),
+				label.String("service.version", "0.1"),
+			),
 		})
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
@@ -104,13 +112,15 @@ func main() {
 
 	ctx := context.Background()
 
-	exporter, err := honeycomb.NewExporter(
-		honeycomb.Config{
-			APIKey: *apikey,
-		},
-		honeycomb.TargetingDataset(*dataset),
-		honeycomb.WithServiceName("opentelemetry-server"),
-		honeycomb.WithDebugEnabled())
+	exporter, err := otlp.NewExporter(
+		otlp.WithInsecure(),
+		otlp.WithAddress("api-dogfood.honeycomb.io:9090"),
+		otlp.WithHeaders(map[string]string{
+			"x-honeycomb-apikey": *apikey,
+			"dataset":            *dataset,
+		}),
+	)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -129,4 +139,37 @@ func main() {
 	if err := runHTTPServer(serverIPAddress, *serverPort, handler, stop); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)
 	}
+}
+
+func speakPlainTextTo(w http.ResponseWriter) {
+	w.Header().Add("Content-Type", "text/plain")
+}
+
+func makeHandler() http.Handler {
+	userNameKey := label.Key("username")
+	var mux http.ServeMux
+	mux.Handle("/hello",
+		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx := req.Context()
+			span := trace.SpanFromContext(ctx)
+			span.SetAttributes(label.String("ex.com/another", "yes"))
+
+			eventAttrs := make([]label.KeyValue, 1, 2)
+			eventAttrs[0] = label.Int("request-handled", 100)
+			userNameVal := baggage.Value(ctx, label.Key("username"))
+			if userNameVal.Type() != label.INVALID {
+				attr := label.KeyValue{
+					Key:   userNameKey,
+					Value: userNameVal,
+				}
+				span.SetAttributes(attr)
+				eventAttrs = append(eventAttrs, attr)
+			}
+			span.AddEvent("handling this...", trace.WithAttributes(eventAttrs...))
+
+			speakPlainTextTo(w)
+			_, err := io.WriteString(w, "Hello, world!\n")
+			span.RecordError(err)
+		}))
+	return &mux
 }

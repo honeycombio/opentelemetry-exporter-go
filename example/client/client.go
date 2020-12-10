@@ -15,16 +15,16 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/exporters/otlp"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 )
 
-func initTracer(exporter *honeycomb.Exporter) func(context.Context) error {
+func initTracer(exporter *otlp.Exporter) func(context.Context) error {
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
 	tp.ApplyConfig(
@@ -34,6 +34,10 @@ func initTracer(exporter *honeycomb.Exporter) func(context.Context) error {
 			// In a production application, use sdktrace.ProbabilitySampler with a desired
 			// probability.
 			DefaultSampler: sdktrace.AlwaysSample(),
+			Resource: resource.NewWithAttributes(
+				label.String("service.name", "client"),
+				label.String("service.version", "0.1"),
+			),
 		})
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
@@ -47,13 +51,23 @@ func main() {
 	dataset := flag.String("dataset", "opentelemetry", "Your Honeycomb dataset")
 	flag.Parse()
 
-	exporter, err := honeycomb.NewExporter(
-		honeycomb.Config{
-			APIKey: *apikey,
-		},
-		honeycomb.TargetingDataset(*dataset),
-		honeycomb.WithServiceName("opentelemetry-client"),
-		honeycomb.WithDebugEnabled())
+	// exporter, err := honeycomb.NewExporter(
+	// 	honeycomb.Config{
+	// 		APIKey: *apikey,
+	// 	},
+	// 	honeycomb.TargetingDataset(*dataset),
+	// 	honeycomb.WithServiceName("opentelemetry-client"),
+	// 	honeycomb.WithDebugEnabled())
+
+	exporter, err := otlp.NewExporter(
+		otlp.WithInsecure(),
+		otlp.WithAddress("api-dogfood.honeycomb.io:9090"),
+		otlp.WithHeaders(map[string]string{
+			"x-honeycomb-apikey": *apikey,
+			"dataset":            *dataset,
+		}),
+	)
+
 	if err != nil {
 		log.Fatal(err)
 	}
