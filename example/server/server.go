@@ -29,12 +29,11 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func initTracer(exporter *honeycomb.Exporter) func() {
+func initTracer(exporter *honeycomb.Exporter) func(context.Context) error {
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
 	tp.ApplyConfig(
@@ -45,10 +44,10 @@ func initTracer(exporter *honeycomb.Exporter) func() {
 			// probability.
 			DefaultSampler: sdktrace.AlwaysSample(),
 		})
-	global.SetTracerProvider(tp)
-	global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(
-		propagators.TraceContext{},
-		propagators.Baggage{}))
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{}))
 	return bsp.Shutdown
 }
 
@@ -116,7 +115,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer exporter.Shutdown(context.Background())
-	defer initTracer(exporter)()
+	defer initTracer(exporter)(context.Background())
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

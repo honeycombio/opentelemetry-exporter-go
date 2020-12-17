@@ -7,11 +7,11 @@ import (
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
 	"github.com/golang/protobuf/ptypes/timestamp"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
+	apitrace "go.opentelemetry.io/otel/trace"
 )
 
 // timestampToTime creates a Go time.Time value from a Google protobuf Timestamp.
@@ -62,7 +62,7 @@ func spanResource(span *tracepb.Span) *resource.Resource {
 		attrs[i] = label.String(k, v)
 		i++
 	}
-	return resource.New(attrs...)
+	return resource.NewWithAttributes(attrs...)
 }
 
 // Create []kv.KeyValue attributes from an OC *Span_Attributes
