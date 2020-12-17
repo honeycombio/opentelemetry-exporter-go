@@ -14,17 +14,17 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/honeycombio/opentelemetry-exporter-go/honeycomb"
 )
 
-func initTracer(exporter *honeycomb.Exporter) func() {
+func initTracer(exporter *honeycomb.Exporter) func(context.Context) error {
 	bsp := sdktrace.NewBatchSpanProcessor(exporter)
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(bsp))
 	tp.ApplyConfig(
@@ -35,10 +35,10 @@ func initTracer(exporter *honeycomb.Exporter) func() {
 			// probability.
 			DefaultSampler: sdktrace.AlwaysSample(),
 		})
-	global.SetTracerProvider(tp)
-	global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(
-		propagators.TraceContext{},
-		propagators.Baggage{}))
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{}))
 	return bsp.Shutdown
 }
 
@@ -58,13 +58,13 @@ func main() {
 		log.Fatal(err)
 	}
 	defer exporter.Shutdown(context.Background())
-	defer initTracer(exporter)()
-	tr := global.Tracer("honeycomb/example/client")
+	defer initTracer(exporter)(context.Background())
+	tr := otel.Tracer("honeycomb/example/client")
 
 	url := flag.String("server", "http://localhost:7777/hello", "server URL")
 	flag.Parse()
 
-	ctx := otel.ContextWithBaggageValues(context.Background(),
+	ctx := baggage.ContextWithValues(context.Background(),
 		label.String("username", "donuts"))
 
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}

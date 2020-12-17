@@ -14,10 +14,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	apitrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
+	apitrace "go.opentelemetry.io/otel/trace"
 )
 
 func TestOCProtoSpanToOTelSpanData(t *testing.T) {
@@ -147,7 +147,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 		HasRemoteParent:  true,
 		DroppedLinkCount: 2,
 		ChildSpanCount:   5,
-		Resource:         resource.New(label.String("host.name", "xanadu")),
+		Resource:         resource.NewWithAttributes(label.String("host.name", "xanadu")),
 	}
 
 	got, err := OCProtoSpanToOTelSpanData(&span)
