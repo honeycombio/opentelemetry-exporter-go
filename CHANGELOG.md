@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Unreleased
 
+## v0.14.0
+
+* Fix Version and update changelog
+
+## v0.13.0
+
+* Updated OpenTelemetry SDK version to v0.13.0 (#95)
+
+## v0.12.0
+
+* Updated OpenTelemetry SDK version to v0.12.0 (#94)
+
 ## v0.11.0
 
 * Updated OpenTelemetry SDK version to v0.11.0 (#90)
