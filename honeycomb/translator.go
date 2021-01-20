@@ -200,13 +200,13 @@ func getStatusMessage(span *tracepb.Span) string {
 	}
 }
 
-// OCProtoSpanToOTelSpanData converts an OC Span to an OTel SpanData.
-func OCProtoSpanToOTelSpanData(span *tracepb.Span) (*trace.SpanData, error) {
+// OCProtoSpanToOTelSpanSnapshot converts an OC Span to an OTel SpanSnapshot
+func OCProtoSpanToOTelSpanSnapshot(span *tracepb.Span) (*trace.SpanSnapshot, error) {
 	if span == nil {
 		return nil, errors.New("expected a non-nil span")
 	}
 
-	spanData := &trace.SpanData{
+	spanData := &trace.SpanSnapshot{
 		SpanContext: spanContext(span.GetTraceId(), span.GetSpanId()),
 	}
 

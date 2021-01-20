@@ -76,12 +76,12 @@ func TestExport(t *testing.T) {
 
 	tests := []struct {
 		name string
-		data *exporttrace.SpanData
+		data *exporttrace.SpanSnapshot
 		want *span
 	}{
 		{
 			name: "no parent",
-			data: &exporttrace.SpanData{
+			data: &exporttrace.SpanSnapshot{
 				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -101,7 +101,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "1 day duration",
-			data: &exporttrace.SpanData{
+			data: &exporttrace.SpanSnapshot{
 				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -121,7 +121,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "status code Unset",
-			data: &exporttrace.SpanData{
+			data: &exporttrace.SpanSnapshot{
 				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -141,7 +141,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "status code Error",
-			data: &exporttrace.SpanData{
+			data: &exporttrace.SpanSnapshot{
 				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,
@@ -161,7 +161,7 @@ func TestExport(t *testing.T) {
 		},
 		{
 			name: "status code Ok",
-			data: &exporttrace.SpanData{
+			data: &exporttrace.SpanSnapshot{
 				SpanContext: apitrace.SpanContext{
 					TraceID: traceID,
 					SpanID:  spanID,

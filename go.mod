@@ -10,10 +10,10 @@ require (
 	github.com/klauspost/compress v1.10.10 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.15.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.15.0
-	go.opentelemetry.io/otel v0.15.0
-	go.opentelemetry.io/otel/sdk v0.15.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.16.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.16.0
+	go.opentelemetry.io/otel v0.16.0
+	go.opentelemetry.io/otel/sdk v0.16.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
