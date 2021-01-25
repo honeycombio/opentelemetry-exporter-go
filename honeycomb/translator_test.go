@@ -15,12 +15,13 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/sdk/export/trace"
+	expTrace "go.opentelemetry.io/otel/sdk/export/trace"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/trace"
 	apitrace "go.opentelemetry.io/otel/trace"
 )
 
-func TestOCProtoSpanToOTelSpanData(t *testing.T) {
+func TestOCProtoSpanToOTelSpanSnapshot(t *testing.T) {
 	start := time.Now()
 	end := start.Add(10 * time.Millisecond)
 	annotationTime := start.Add(3 * time.Millisecond)
@@ -112,7 +113,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 		},
 	}
 
-	want := &trace.SpanData{
+	want := &expTrace.SpanSnapshot{
 		SpanContext:  spanContext([]byte{0x02}, []byte{0x03}),
 		ParentSpanID: apitrace.SpanID{0x01},
 		SpanKind:     apitrace.SpanKindClient,
@@ -133,7 +134,7 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 				},
 			},
 		},
-		MessageEvents: []trace.Event{
+		MessageEvents: []expTrace.Event{
 			{
 				Name: "test-event",
 				Time: time.Unix(annotationTime.Unix(), int64(annotationTime.Nanosecond())),
@@ -150,12 +151,12 @@ func TestOCProtoSpanToOTelSpanData(t *testing.T) {
 		Resource:         resource.NewWithAttributes(label.String("host.name", "xanadu")),
 	}
 
-	got, err := OCProtoSpanToOTelSpanData(&span)
+	got, err := OCProtoSpanToOTelSpanSnapshot(&span)
 	if err != nil {
 		t.Fatalf("failed to convert proto span to otel span data: %v", err)
 	}
 
-	if diff := cmp.Diff(want, got, cmp.AllowUnexported(label.Value{}), cmpopts.SortSlices(keyValueLess)); diff != "" {
+	if diff := cmp.Diff(want, got, cmp.AllowUnexported(label.Value{}), cmp.AllowUnexported(trace.TraceState{}), cmpopts.SortSlices(keyValueLess)); diff != "" {
 		t.Errorf("otel span: (-want +got):\n%s", diff)
 	}
 }

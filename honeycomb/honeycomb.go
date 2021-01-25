@@ -377,7 +377,7 @@ func getHoneycombTraceID(traceID []byte) string {
 	return fmt.Sprintf("%016x", low)
 }
 
-func honeycombSpan(s *trace.SpanData) *span {
+func honeycombSpan(s *trace.SpanSnapshot) *span {
 	sc := s.SpanContext
 
 	hcSpan := &span{
@@ -491,14 +491,14 @@ func (e *Exporter) RunErrorLogger(ctx context.Context) {
 }
 
 // ExportSpans exports a sequence of OpenTelemetry spans to Honeycomb.
-func (e *Exporter) ExportSpans(ctx context.Context, sds []*trace.SpanData) error {
+func (e *Exporter) ExportSpans(ctx context.Context, sds []*trace.SpanSnapshot) error {
 	for _, span := range sds {
 		e.exportSpan(ctx, span)
 	}
 	return nil
 }
 
-func (e *Exporter) exportSpan(ctx context.Context, data *trace.SpanData) {
+func (e *Exporter) exportSpan(ctx context.Context, data *trace.SpanSnapshot) {
 	ev := e.client.NewEvent()
 
 	applyResourceAttributes := func(ev *libhoney.Event) {
