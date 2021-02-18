@@ -4,6 +4,10 @@
 
 [![CircleCI](https://circleci.com/gh/honeycombio/opentelemetry-exporter-go.svg?style=svg)](https://circleci.com/gh/honeycombio/opentelemetry-exporter-go)
 
+**NOTE:** Did you know that Honeycomb now supports OTLP ingest directly? This means you
+can use [an OTLP exporter](https://docs.honeycomb.io/getting-data-in/go/opentelemetry-tutorial/#configure-export-to-honeycomb)
+and no longer need this exporter to send data to Honeycomb.
+
 ## Default Exporter
 
 The Exporter can be initialized using `sdktrace.WithSyncer`:
