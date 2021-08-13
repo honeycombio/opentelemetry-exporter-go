@@ -2,11 +2,10 @@
 
 # The Honeycomb OpenTelemetry Exporter for Go
 
+[![OSS Lifecycle](https://img.shields.io/osslifecycle/honeycombio/opentelemetry-exporter-go)](https://github.com/honeycombio/home/blob/main/honeycomb-oss-lifecycle-and-practices.md)
 [![CircleCI](https://circleci.com/gh/honeycombio/opentelemetry-exporter-go.svg?style=svg)](https://circleci.com/gh/honeycombio/opentelemetry-exporter-go)
 
-**NOTE:** Did you know that Honeycomb now supports OTLP ingest directly? This means you
-can use [an OTLP exporter](https://docs.honeycomb.io/getting-data-in/go/opentelemetry-tutorial/#configure-export-to-honeycomb)
-and no longer need this exporter to send data to Honeycomb.
+**STATUS: this project is being sunset.** See https://github.com/honeycombio/opentelemetry-exporter-go/issues/105
 
 ## Default Exporter
 
